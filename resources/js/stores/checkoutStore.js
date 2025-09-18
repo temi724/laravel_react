@@ -1,0 +1,254 @@
+import { create } from 'zustand';
+import axios from 'axios';
+import useCartStore from './cartStore';
+
+const useCheckoutStore = create((set, get) => ({
+  // State
+  cartItems: [],
+  cartTotal: 0,
+  cartCount: 0,
+
+  // Form data
+  username: '',
+  email: '',
+  deliveryOption: 'pickup',
+  location: '',
+  city: '',
+  state: '',
+  phone: '',
+  paymentMethod: 'bank_transfer',
+
+  // UI state
+  showBankModal: false,
+  isLoading: false,
+  errors: {},
+  generatedOrderId: null,
+
+  // Actions
+  setFormField: (field, value) => {
+    set((state) => {
+      const newState = {
+        [field]: value,
+        errors: { ...state.errors, [field]: null }, // Clear field error
+      };
+
+      // Clear location fields when switching to pickup
+      if (field === 'deliveryOption' && value === 'pickup') {
+        newState.location = '';
+        newState.city = '';
+        newState.state = '';
+        // Also clear any location-related errors
+        newState.errors = {
+          ...newState.errors,
+          location: null,
+          city: null,
+          state: null
+        };
+      }
+
+      return newState;
+    });
+  },
+
+  setErrors: (errors) => {
+    set({ errors });
+  },
+
+  loadCart: async () => {
+    try {
+      // Get cart data from cartStore instead of API
+      const cartStore = useCartStore.getState();
+      const items = cartStore.cartItems;
+      const total = cartStore.cartTotal;
+      const count = cartStore.cartCount;
+
+      set({
+        cartItems: items,
+        cartTotal: total,
+        cartCount: count,
+      });
+    } catch (error) {
+      console.error('Error loading cart:', error);
+    }
+  },
+
+  updateStorageOption: async (itemId, storageOption, storagePrice) => {
+    set({ isLoading: true });
+
+    try {
+      const response = await axios.put('/api/cart/update-storage', {
+        itemId,
+        storageOption,
+        storagePrice,
+      });
+
+      if (response.data.success) {
+        await get().loadCart();
+        get().showToast('Storage option updated successfully!');
+      }
+    } catch (error) {
+      console.error('Error updating storage:', error);
+      get().showToast('Error updating storage option', 'error');
+    } finally {
+      set({ isLoading: false });
+    }
+  },
+
+  validateForm: () => {
+    const state = get();
+    const errors = {};
+
+    if (!state.username.trim()) {
+      errors.username = 'Username is required';
+    }
+
+    if (!state.email.trim()) {
+      errors.email = 'Email is required';
+    } else if (!/\S+@\S+\.\S+/.test(state.email)) {
+      errors.email = 'Please enter a valid email address';
+    }
+
+    if (!state.phone.trim()) {
+      errors.phone = 'Phone number is required';
+    }
+
+    if (state.deliveryOption === 'delivery') {
+      if (!state.location.trim()) {
+        errors.location = 'Delivery address is required';
+      }
+      if (!state.city.trim()) {
+        errors.city = 'City is required';
+      }
+      if (!state.state.trim()) {
+        errors.state = 'State is required';
+      }
+    }
+
+    set({ errors });
+    return Object.keys(errors).length === 0;
+  },
+
+  placeOrder: async () => {
+    if (!get().validateForm()) {
+      return { success: false };
+    }
+
+    set({ isLoading: true });
+
+    try {
+      const state = get();
+
+      // Generate order ID
+      const orderId = 'ORD-' + Date.now().toString().slice(-8) + Math.random().toString(36).substr(2, 4).toUpperCase();
+
+      const orderData = {
+        username: state.username,
+        email: state.email,
+        deliveryOption: state.deliveryOption,
+        phone: state.phone,
+        paymentMethod: 'bank_transfer', // Always bank transfer
+        cartItems: state.cartItems,
+        cartTotal: state.cartTotal,
+      };
+
+      // Only include location fields for delivery orders
+      if (state.deliveryOption === 'delivery') {
+        orderData.location = state.location;
+        orderData.city = state.city;
+        orderData.state = state.state;
+      }
+
+      const response = await axios.post('/api/orders/place', orderData);
+
+      if (response.data.success) {
+        set({
+          generatedOrderId: response.data.orderId || orderId,
+          showBankModal: true, // Always show bank modal for bank transfer
+        });
+
+        return { success: true, orderId: response.data.orderId || orderId };
+      } else {
+        get().showToast(response.data.message || 'Error placing order', 'error');
+        return { success: false };
+      }
+    } catch (error) {
+      console.error('Error placing order:', error);
+
+      if (error.response?.data?.errors) {
+        set({ errors: error.response.data.errors });
+      }
+
+      get().showToast(
+        error.response?.data?.message || 'Error placing order',
+        'error'
+      );
+
+      return { success: false };
+    } finally {
+      set({ isLoading: false });
+    }
+  },
+
+  // UI Actions
+  openBankModal: () => set({ showBankModal: true }),
+  closeBankModal: () => set({ showBankModal: false }),
+
+  // Clear cart and close modal (for Continue button)
+  completeOrder: () => {
+    try {
+      const cartStore = useCartStore.getState();
+      cartStore.clearCart();
+      set({ showBankModal: false });
+      get().showToast('Order completed! Cart cleared.');
+    } catch (error) {
+      console.error('Error clearing cart:', error);
+      get().showToast('Error clearing cart', 'error');
+    }
+  },
+
+  // Toast functionality
+  showToast: (message, type = 'success') => {
+    const toast = document.createElement('div');
+    toast.className = `fixed top-4 right-4 z-50 px-4 py-2 rounded-md text-white font-medium transition-all duration-300 transform translate-x-full ${
+      type === 'error' ? 'bg-red-500' : 'bg-green-500'
+    }`;
+    toast.textContent = message;
+
+    document.body.appendChild(toast);
+
+    setTimeout(() => {
+      toast.classList.remove('translate-x-full');
+    }, 10);
+
+    setTimeout(() => {
+      toast.classList.add('translate-x-full');
+      setTimeout(() => {
+        document.body.removeChild(toast);
+      }, 300);
+    }, 3000);
+  },
+
+  // Reset form
+  resetForm: () => {
+    set({
+      username: '',
+      email: '',
+      deliveryOption: 'pickup',
+      location: '',
+      city: '',
+      state: '',
+      phone: '',
+      paymentMethod: 'bank_transfer',
+      errors: {},
+      generatedOrderId: null,
+      showBankModal: false,
+    });
+  },
+
+  // Initialize store
+  initialize: async () => {
+    await get().loadCart();
+  },
+}));
+
+export default useCheckoutStore;

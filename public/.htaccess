@@ -1,0 +1,38 @@
+<IfModule mod_rewrite.c>
+    <IfModule mod_negotiation.c>
+        Options -MultiViews -Indexes
+    </IfModule>
+
+    RewriteEngine On
+
+    # Handle Authorization Header
+    RewriteCond %{HTTP:Authorization} .
+    RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
+
+    # Handle X-XSRF-Token Header
+    RewriteCond %{HTTP:x-xsrf-token} .
+    RewriteRule .* - [E=HTTP_X_XSRF_TOKEN:%{HTTP:X-XSRF-Token}]
+
+    # cPanel Fix: Block GET requests to Livewire upload endpoint
+    RewriteCond %{REQUEST_URI} ^/livewire/upload-file$ [NC]
+    RewriteCond %{REQUEST_METHOD} =GET
+    RewriteRule .* /livewire-upload-blocked [R=302,L]
+
+    # cPanel Fix: Handle blocked upload requests with friendly message
+    RewriteRule ^livewire-upload-blocked$ - [R=404,L]
+
+    # Serve images from root images folder
+    RewriteCond %{REQUEST_URI} ^/images/(.*)$ [NC]
+    RewriteCond %{DOCUMENT_ROOT}/../images/$1 -f
+    RewriteRule ^images/(.*)$ ../images/$1 [L]
+
+    # Redirect Trailing Slashes If Not A Folder...
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteCond %{REQUEST_URI} (.+)/$
+    RewriteRule ^ %1 [L,R=301]
+
+    # Send Requests To Front Controller...
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteRule ^ index.php [L]
+</IfModule>

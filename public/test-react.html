@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>React Test</title>
+    <meta name="csrf-token" content="test">
+</head>
+<body>
+    <h1>React Component Test</h1>
+
+    <div>This should render a ProductGrid below:</div>
+    <div
+        data-react-component="ProductGrid"
+        style="border: 2px solid red; min-height: 200px; padding: 20px;"
+    >
+        Loading React component...
+    </div>
+
+    <script type="module" src="/build/assets/app-CL53i9qo.js"></script>
+
+    <script>
+        console.log('Test page loaded');
+        setTimeout(() => {
+            console.log('React elements found:', document.querySelectorAll('[data-react-component]').length);
+        }, 1000);
+    </script>
+</body>
+</html>
+</content>
+</invoke>
