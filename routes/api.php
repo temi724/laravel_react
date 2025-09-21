@@ -1,6 +1,5 @@
 <?php
 
-// use App\Http\Controllers\AdminController as ControllersAdminController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\ProductController;
@@ -26,7 +25,6 @@ Route::middleware(['web'])->group(function () {
     Route::get('cart/count', [CartController::class, 'getCount']);
     Route::post('cart/add', [CartController::class, 'add']);
     Route::put('cart/update', [CartController::class, 'update']);
-    Route::put('cart/update-storage', [CartController::class, 'updateStorage']);
     Route::delete('cart/remove/{itemId}', [CartController::class, 'remove']);
     Route::delete('cart/clear', [CartController::class, 'clear']);
 });
@@ -52,10 +50,40 @@ Route::apiResource('sales', SalesController::class);
 Route::apiResource('categories', CategoryController::class);
 Route::get('categories/{id}/products', [CategoryController::class, 'showWithProducts']);
 
-// Admin API routes
-// Route::apiResource('admins', AdminController::class);
-Route::post('admin/login', [AdminController::class, 'login']);
-// Route::post('admin/create', [AdminController::class, 'store']);
+// Admin API routes - Need session support for login
+Route::middleware(['web'])->group(function () {
+    Route::post('admin/login', [AdminController::class, 'login']);
+    Route::get('admin/debug-session', function() {
+        return response()->json([
+            'session_data' => [
+                'admin_logged_in' => session('admin_logged_in'),
+                'admin_id' => session('admin_id'),
+                'admin_name' => session('admin_name'),
+                'all_session' => session()->all()
+            ]
+        ]);
+    });
+});
+
+// Protected admin routes - Need session support for authentication
+Route::middleware(['web', 'admin.auth'])->group(function () {
+    Route::get('admin/dashboard-stats', [AdminController::class, 'getDashboardStats']);
+    Route::get('admin/products', [AdminController::class, 'getProducts']);
+    Route::post('admin/products', [AdminController::class, 'createProduct']);
+    Route::put('admin/products/{id}', [AdminController::class, 'updateProduct']);
+    Route::delete('admin/products/{id}', [AdminController::class, 'deleteProduct']);
+    Route::get('admin/deals', [AdminController::class, 'getDeals']);
+    Route::post('admin/deals', [AdminController::class, 'createDeal']);
+    Route::put('admin/deals/{id}', [AdminController::class, 'updateDeal']);
+    Route::delete('admin/deals/{id}', [AdminController::class, 'deleteDeal']);
+    Route::get('admin/sales', [AdminController::class, 'getSales']);
+    Route::get('admin/sales/{id}', [AdminController::class, 'getSale']);
+    Route::get('admin/sales/{id}/invoice', [AdminController::class, 'getInvoiceData']);
+    Route::get('admin/monthly-sales', [AdminController::class, 'getMonthlySalesData']);
+    Route::get('admin/top-selling', [AdminController::class, 'getTopSellingItems']);
+    Route::put('admin/sales/{id}/status', [AdminController::class, 'updateSaleStatus']);
+    Route::put('admin/sales/{id}/payment-status', [AdminController::class, 'updateSalePaymentStatus']);
+});
 // Custom routes if needed
 // Route::get('/products/in-stock', [ProductController::class, 'inStock']);
 // Route::post('/sales/{id}/add-product', [SalesController::class, 'addProduct']);

@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Products with Logs</title>
+</head>
+<body>
+    <h1>Test Products API with Logs</h1>
+    
+    <button onclick="testAPI()">Test API</button>
+    <div id="result"></div>
+    
+    <script>
+        async function testAPI() {
+            const resultDiv = document.getElementById('result');
+            resultDiv.innerHTML = '<p>Loading...</p>';
+            
+            try {
+                const response = await fetch('http://127.0.0.1:8003/api/products?per_page=20');
+                const data = await response.json();
+                
+                resultDiv.innerHTML = `
+                    <h3>API Response:</h3>
+                    <p><strong>Total items:</strong> ${data.total}</p>
+                    <p><strong>Current page:</strong> ${data.current_page}</p>
+                    <p><strong>Per page:</strong> ${data.per_page}</p>
+                    <p><strong>Items returned:</strong> ${data.data.length}</p>
+                    <h4>Items:</h4>
+                    <ul>
+                        ${data.data.map(item => `<li>${item.product_name} (${item.type}) - $${item.price}</li>`).join('')}
+                    </ul>
+                `;
+                
+            } catch (error) {
+                resultDiv.innerHTML = `<p style="color: red;">Error: ${error.message}</p>`;
+            }
+        }
+    </script>
+</body>
+</html>

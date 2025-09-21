@@ -69,7 +69,7 @@ const CheckoutPage = () => {
     errors,
     generatedOrderId,
     setFormField,
-    updateStorageOption,
+    showPaymentModal,
     placeOrder,
     openBankModal,
     closeBankModal,
@@ -78,14 +78,6 @@ const CheckoutPage = () => {
     initialize,
   } = useCheckoutStore();
 
-  const [availableStorageOptions] = useState({
-    '64GB': 150000,
-    '128GB': 200000,
-    '256GB': 300000,
-    '512GB': 450000,
-    '1TB': 600000,
-  });
-
   useEffect(() => {
     initialize();
   }, [initialize]);
@@ -93,17 +85,12 @@ const CheckoutPage = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    const result = await placeOrder();
+    const result = showPaymentModal();
 
     if (result.success) {
-      // Bank modal will be shown automatically via showBankModal state
-      // No redirect needed here since modal handles the flow
+      // Payment modal is now shown with generated order ID
+      // No API call made yet - that happens when user clicks Continue
     }
-  };
-
-  const handleStorageChange = (itemId, storageOption) => {
-    const storagePrice = availableStorageOptions[storageOption];
-    updateStorageOption(itemId, storageOption, storagePrice);
   };
 
   // Copy functions for bank details
@@ -276,11 +263,11 @@ Account Number: 5401799184`;
                 <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
                   <h3 className="font-medium text-blue-900 mb-2">Pickup Location</h3>
                   <div className="text-sm text-blue-800 space-y-1">
-                    <p className="font-medium">Gadget Store MMM</p>
-                    <p>123 Technology Street, Computer Village</p>
+                    <p className="font-medium">Murphylog Global Concept</p>
+                    <p>12, Ola ayeni street</p>
                     <p>Ikeja, Lagos State, Nigeria</p>
                     <p className="mt-2">
-                      <span className="font-medium">Hours:</span> Mon-Sat 9:00 AM - 7:00 PM
+                      <span className="font-medium">Hours:</span> Mon-Sat 9:00 AM - 6:30 PM
                     </p>
                     <p>
                       <span className="font-medium">Phone:</span> +234 801 234 5678
@@ -395,17 +382,9 @@ Account Number: 5401799184`;
 
                     {item.selected_storage && (
                       <div className="mt-1">
-                        <select
-                          value={item.selected_storage}
-                          onChange={(e) => handleStorageChange(item.id, e.target.value)}
-                          className="text-xs border border-gray-300 rounded px-1 py-0.5"
-                        >
-                          {Object.entries(availableStorageOptions).map(([storage, price]) => (
-                            <option key={storage} value={storage}>
-                              {storage} - ₦{price.toLocaleString()}
-                            </option>
-                          ))}
-                        </select>
+                        <p className="text-xs text-gray-700 font-medium">
+                          Storage: {item.selected_storage}
+                        </p>
                       </div>
                     )}
                   </div>
@@ -595,16 +574,24 @@ Account Number: 5401799184`;
               <div className="p-6 bg-gray-50 rounded-b-3xl">
                 <div className="flex space-x-3">
                   <button
-                    onClick={() => {
-                      completeOrder();
-                      window.location.href = '/checkout/success';
+                    onClick={async () => {
+                      const result = await completeOrder();
+                      if (result.success) {
+                        window.location.href = '/checkout/success';
+                      }
+                      // If failed, stay on modal to allow retry
                     }}
-                    className="flex-1 bg-gradient-to-r from-green-600 to-blue-600 hover:from-green-700 hover:to-blue-700 text-white font-bold py-3 px-4 rounded-xl transition-all duration-300 transform hover:-translate-y-0.5 hover:shadow-lg">
+                    disabled={isLoading}
+                    className="flex-1 bg-gradient-to-r from-green-600 to-blue-600 hover:from-green-700 hover:to-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold py-3 px-4 rounded-xl transition-all duration-300 transform hover:-translate-y-0.5 hover:shadow-lg">
                     <span className="flex items-center justify-center">
-                      <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7"></path>
-                      </svg>
-                      Continue
+                      {isLoading ? (
+                        <div className="w-5 h-5 mr-2 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                      ) : (
+                        <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7"></path>
+                        </svg>
+                      )}
+                      {isLoading ? 'Confirming...' : 'Continue'}
                     </span>
                   </button>
                   <button

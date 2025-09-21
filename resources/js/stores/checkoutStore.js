@@ -72,27 +72,7 @@ const useCheckoutStore = create((set, get) => ({
     }
   },
 
-  updateStorageOption: async (itemId, storageOption, storagePrice) => {
-    set({ isLoading: true });
 
-    try {
-      const response = await axios.put('/api/cart/update-storage', {
-        itemId,
-        storageOption,
-        storagePrice,
-      });
-
-      if (response.data.success) {
-        await get().loadCart();
-        get().showToast('Storage option updated successfully!');
-      }
-    } catch (error) {
-      console.error('Error updating storage:', error);
-      get().showToast('Error updating storage option', 'error');
-    } finally {
-      set({ isLoading: false });
-    }
-  },
 
   validateForm: () => {
     const state = get();
@@ -128,18 +108,38 @@ const useCheckoutStore = create((set, get) => ({
     return Object.keys(errors).length === 0;
   },
 
-  placeOrder: async () => {
+  // Generate JavaScript Order ID for faster display
+  generateOrderId: () => {
+    const timestamp = Date.now().toString();
+    const randomPart = Math.random().toString(36).substr(2, 4).toUpperCase();
+    const datePart = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+    return `ORD-${datePart}-${timestamp.slice(-6)}${randomPart}`;
+  },
+
+  // Show payment modal immediately without API call
+  showPaymentModal: () => {
     if (!get().validateForm()) {
       return { success: false };
     }
 
+    // Generate order ID immediately for display
+    const orderId = get().generateOrderId();
+
+    set({
+      generatedOrderId: orderId,
+      showBankModal: true,
+      isLoading: false
+    });
+
+    return { success: true, orderId };
+  },
+
+  // Place order API call - only called after payment confirmation
+  placeOrder: async () => {
     set({ isLoading: true });
 
     try {
       const state = get();
-
-      // Generate order ID
-      const orderId = 'ORD-' + Date.now().toString().slice(-8) + Math.random().toString(36).substr(2, 4).toUpperCase();
 
       const orderData = {
         username: state.username,
@@ -149,6 +149,7 @@ const useCheckoutStore = create((set, get) => ({
         paymentMethod: 'bank_transfer', // Always bank transfer
         cartItems: state.cartItems,
         cartTotal: state.cartTotal,
+        orderId: state.generatedOrderId, // Use the pre-generated order ID
       };
 
       // Only include location fields for delivery orders
@@ -161,12 +162,9 @@ const useCheckoutStore = create((set, get) => ({
       const response = await axios.post('/api/orders/place', orderData);
 
       if (response.data.success) {
-        set({
-          generatedOrderId: response.data.orderId || orderId,
-          showBankModal: true, // Always show bank modal for bank transfer
-        });
-
-        return { success: true, orderId: response.data.orderId || orderId };
+        // Order successfully saved to database
+        get().showToast('Order placed successfully! Please make payment.', 'success');
+        return { success: true, orderId: response.data.orderId || state.generatedOrderId };
       } else {
         get().showToast(response.data.message || 'Error placing order', 'error');
         return { success: false };
@@ -193,16 +191,27 @@ const useCheckoutStore = create((set, get) => ({
   openBankModal: () => set({ showBankModal: true }),
   closeBankModal: () => set({ showBankModal: false }),
 
-  // Clear cart and close modal (for Continue button)
-  completeOrder: () => {
+  // Complete order after payment confirmation - calls API and clears cart
+  completeOrder: async () => {
     try {
-      const cartStore = useCartStore.getState();
-      cartStore.clearCart();
-      set({ showBankModal: false });
-      get().showToast('Order completed! Cart cleared.');
+      // First place the order in the database
+      const result = await get().placeOrder();
+
+      if (result.success) {
+        // Clear cart only after successful order placement
+        const cartStore = useCartStore.getState();
+        cartStore.clearCart();
+        set({ showBankModal: false });
+        get().showToast('Order confirmed and saved! Cart cleared.', 'success');
+        return { success: true };
+      } else {
+        get().showToast('Failed to save order. Please try again.', 'error');
+        return { success: false };
+      }
     } catch (error) {
-      console.error('Error clearing cart:', error);
-      get().showToast('Error clearing cart', 'error');
+      console.error('Error completing order:', error);
+      get().showToast('Error completing order', 'error');
+      return { success: false };
     }
   },
 

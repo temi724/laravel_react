@@ -62,37 +62,72 @@ class ProductController extends Controller
             'sort_direction' => 'nullable|string|in:asc,desc'
         ]);
 
-        $query = Product::query();
+        // Get products
+        $productQuery = Product::with('category');
+        // Get deals
+        $dealQuery = \App\Models\Deal::with('category');
 
-        // Apply filters
+        // Apply filters to both queries
         if ($request->has('category_id') && $request->get('category_id')) {
-            $query->where('category_id', $request->get('category_id'));
+            $productQuery->where('category_id', $request->get('category_id'));
+            $dealQuery->where('category_id', $request->get('category_id'));
         }
 
         if ($request->has('min_price')) {
-            $query->where('price', '>=', $request->get('min_price'));
+            $productQuery->where('price', '>=', $request->get('min_price'));
+            $dealQuery->where('price', '>=', $request->get('min_price'));
         }
 
         if ($request->has('max_price')) {
-            $query->where('price', '<=', $request->get('max_price'));
+            $productQuery->where('price', '<=', $request->get('max_price'));
+            $dealQuery->where('price', '<=', $request->get('max_price'));
         }
 
         if ($request->has('status') && $request->get('status')) {
-            $query->where('product_status', $request->get('status'));
+            $productQuery->where('product_status', $request->get('status'));
+            $dealQuery->where('product_status', $request->get('status'));
         }
 
         if ($request->has('in_stock')) {
-            $query->where('in_stock', $request->boolean('in_stock'));
+            $productQuery->where('in_stock', $request->boolean('in_stock'));
+            $dealQuery->where('in_stock', $request->boolean('in_stock'));
         }
+
+        // Get all products and deals
+        $products = $productQuery->get()->map(function ($product) {
+            $product->type = 'product';
+            return $product;
+        });
+
+        $deals = $dealQuery->get()->map(function ($deal) {
+            $deal->type = 'deal';
+            return $deal;
+        });
+
+        // Combine and sort
+        $combined = $products->concat($deals);
 
         // Apply sorting
         $sortBy = $request->get('sort_by', 'created_at');
         $sortDirection = $request->get('sort_direction', 'desc');
-        $query->orderBy($sortBy, $sortDirection);
+        
+        $combined = $combined->sortBy($sortBy, SORT_REGULAR, $sortDirection === 'desc');
 
-        // Pagination
+        // Manual pagination
         $perPage = min($request->get('per_page', 15), 100);
-        $results = $query->paginate($perPage);
+        $page = $request->get('page', 1);
+        $total = $combined->count();
+        $items = $combined->forPage($page, $perPage)->values();
+
+        $results = [
+            'data' => $items,
+            'current_page' => $page,
+            'last_page' => ceil($total / $perPage),
+            'per_page' => $perPage,
+            'total' => $total,
+            'from' => ($page - 1) * $perPage + 1,
+            'to' => min($page * $perPage, $total)
+        ];
 
         return response()->json($results);
     }
@@ -188,8 +223,38 @@ class ProductController extends Controller
      */
     public function show(string $id)
     {
-        $product = Product::findOrFail($id);
-        return response()->json($product);
+        // Cache individual product/deal for 30 minutes
+        $result = cache()->remember("product.{$id}", 1800, function () use ($id) {
+            // Try to find as product first
+            $product = Product::with('category')->find($id);
+            if ($product) {
+                return [
+                    'item' => $product,
+                    'type' => 'product'
+                ];
+            }
+
+            // If not found as product, try as deal
+            $deal = \App\Models\Deal::with('category')->find($id);
+            if ($deal) {
+                return [
+                    'item' => $deal,
+                    'type' => 'deal'
+                ];
+            }
+
+            return null;
+        });
+
+        if (!$result) {
+            abort(404, 'Product or deal not found');
+        }
+
+        // Return the item with type information
+        $response = $result['item']->toArray();
+        $response['type'] = $result['type'];
+
+        return response()->json($response);
     }
 
     /**
@@ -406,46 +471,82 @@ class ProductController extends Controller
             'per_page' => 'nullable|integer|min:1|max:100'
         ]);
 
-        $query = Product::query();
-
-        // Search in multiple fields
         $searchTerm = $request->get('q');
-        $query->where(function ($q) use ($searchTerm) {
+
+        // Search products
+        $productQuery = Product::query();
+        $productQuery->where(function ($q) use ($searchTerm) {
             $q->where('product_name', 'LIKE', "%{$searchTerm}%")
               ->orWhere('description', 'LIKE', "%{$searchTerm}%")
               ->orWhere('overview', 'LIKE', "%{$searchTerm}%")
               ->orWhere('about', 'LIKE', "%{$searchTerm}%");
         });
 
-        // Apply filters
+        // Search deals
+        $dealQuery = \App\Models\Deal::query();
+        $dealQuery->where(function ($q) use ($searchTerm) {
+            $q->where('product_name', 'LIKE', "%{$searchTerm}%")
+              ->orWhere('description', 'LIKE', "%{$searchTerm}%")
+              ->orWhere('overview', 'LIKE', "%{$searchTerm}%")
+              ->orWhere('about', 'LIKE', "%{$searchTerm}%");
+        });
+
+        // Apply filters to both queries
         if ($request->has('category_id')) {
-            $query->where('category_id', $request->get('category_id'));
+            $productQuery->where('category_id', $request->get('category_id'));
+            $dealQuery->where('category_id', $request->get('category_id'));
         }
 
         if ($request->has('min_price')) {
-            $query->where('price', '>=', $request->get('min_price'));
+            $productQuery->where('price', '>=', $request->get('min_price'));
+            $dealQuery->where('price', '>=', $request->get('min_price'));
         }
 
         if ($request->has('max_price')) {
-            $query->where('price', '<=', $request->get('max_price'));
+            $productQuery->where('price', '<=', $request->get('max_price'));
+            $dealQuery->where('price', '<=', $request->get('max_price'));
         }
 
         if ($request->has('in_stock')) {
-            $query->where('in_stock', $request->boolean('in_stock'));
+            $productQuery->where('in_stock', $request->boolean('in_stock'));
+            $dealQuery->where('in_stock', $request->boolean('in_stock'));
         }
 
-        // Pagination
-        $perPage = min($request->get('per_page', 15), 100);
-        $results = $query->latest()->paginate($perPage);
+        // Get results and add type
+        $products = $productQuery->with('category')->get()->map(function ($product) {
+            $product->type = 'product';
+            return $product;
+        });
 
-        // Add search metadata to response
-        $results = $results->toArray();
-        $results['search_query'] = $searchTerm;
-        $results['filters_applied'] = [
-            'category_id' => $request->get('category_id'),
-            'min_price' => $request->get('min_price'),
-            'max_price' => $request->get('max_price'),
-            'in_stock' => $request->get('in_stock')
+        $deals = $dealQuery->with('category')->get()->map(function ($deal) {
+            $deal->type = 'deal';
+            return $deal;
+        });
+
+        // Combine and sort by latest
+        $combined = $products->concat($deals)->sortByDesc('created_at');
+
+        // Manual pagination
+        $perPage = min($request->get('per_page', 15), 100);
+        $page = $request->get('page', 1);
+        $total = $combined->count();
+        $items = $combined->forPage($page, $perPage)->values();
+
+        $results = [
+            'data' => $items,
+            'current_page' => $page,
+            'last_page' => ceil($total / $perPage),
+            'per_page' => $perPage,
+            'total' => $total,
+            'from' => ($page - 1) * $perPage + 1,
+            'to' => min($page * $perPage, $total),
+            'search_query' => $searchTerm,
+            'filters_applied' => [
+                'category_id' => $request->get('category_id'),
+                'min_price' => $request->get('min_price'),
+                'max_price' => $request->get('max_price'),
+                'in_stock' => $request->get('in_stock')
+            ]
         ];
 
         return response()->json($results);
@@ -504,12 +605,39 @@ class ProductController extends Controller
     public function productsByCategory(Request $request, string $categoryId)
     {
         $perPage = min($request->get('per_page', 15), 100);
-        $products = Product::byCategory($categoryId)->latest()->paginate($perPage);
+        $exclude = $request->get('exclude');
+        $limit = $request->get('limit');
 
-        // Add category_id to response metadata
-        $response = $products->toArray();
-        $response['category_id'] = $categoryId;
+        // Create cache key based on parameters
+        $cacheKey = "products.category.{$categoryId}." . md5(serialize($request->all()));
 
-        return response()->json($response);
+        // Cache for 15 minutes
+        return cache()->remember($cacheKey, 900, function () use ($request, $categoryId, $perPage, $exclude, $limit) {
+            $query = Product::with('category')->byCategory($categoryId)->latest();
+
+            // Exclude specific product if provided
+            if ($exclude) {
+                $query->where('id', '!=', $exclude);
+            }
+
+            // If limit is provided, use it instead of pagination
+            if ($limit) {
+                $products = $query->limit($limit)->get();
+                return response()->json([
+                    'data' => $products,
+                    'category_id' => $categoryId,
+                    'total' => $products->count(),
+                    'limit' => $limit
+                ]);
+            }
+
+            $products = $query->paginate($perPage);
+
+            // Add category_id to response metadata
+            $response = $products->toArray();
+            $response['category_id'] = $categoryId;
+
+            return response()->json($response);
+        });
     }
 }

@@ -3,8 +3,6 @@ import useProductStore from '../stores/productStore';
 import useCartStore from '../stores/cartStore';
 
 const ProductGrid = ({ initialSearchQuery = '', initialCategoryId = '' }) => {
-  console.log('ProductGrid component initialized with props:', { initialSearchQuery, initialCategoryId });
-
   const {
     products,
     totalProducts,
@@ -26,8 +24,6 @@ const ProductGrid = ({ initialSearchQuery = '', initialCategoryId = '' }) => {
     initialize,
   } = useProductStore();
 
-  console.log('ProductGrid state:', { products: products.length, totalProducts, isLoading });
-
   const { addToCart, isLoading: cartLoading } = useCartStore();
 
   const [categories, setCategories] = useState([]);
@@ -37,7 +33,6 @@ const ProductGrid = ({ initialSearchQuery = '', initialCategoryId = '' }) => {
     fetch('/api/categories')
       .then(res => res.json())
       .then(data => {
-        console.log('Categories API response:', data);
         // Categories API returns array directly
         setCategories(data);
       })
@@ -55,10 +50,8 @@ const ProductGrid = ({ initialSearchQuery = '', initialCategoryId = '' }) => {
   };
 
   const handleAddToCart = async (productId) => {
-    console.log('ProductGrid handleAddToCart called with productId:', productId);
     try {
       await addToCart(productId, 1, 'product');
-      console.log('ProductGrid addToCart completed successfully');
     } catch (error) {
       console.error('ProductGrid addToCart failed:', error);
     }
@@ -315,15 +308,29 @@ const ProductGrid = ({ initialSearchQuery = '', initialCategoryId = '' }) => {
                   <div className="p-4 sm:p-5 lg:p-3 xl:p-3">
                     {/* Category */}
                     {product.category && (
-                      <div className="text-xs text-blue-600 font-semibold mb-2 lg:mb-1 tracking-wide uppercase">
-                        {product.category.name}
+                      <div className="flex items-center space-x-2 mb-2 lg:mb-1">
+                        <div className="text-xs text-blue-600 font-semibold tracking-wide uppercase">
+                          {product.category.name}
+                        </div>
+                        {product.type === 'deal' && (
+                          <span className="bg-orange-100 text-orange-800 text-xs font-medium px-2 py-1 rounded">
+                            DEAL
+                          </span>
+                        )}
                       </div>
                     )}
 
                     {/* Product Name */}
-                    <h3 className="font-bold text-gray-900 text-sm sm:text-base lg:text-sm xl:text-sm mb-2 lg:mb-1 line-clamp-2 leading-tight group-hover:text-gray-700 transition-colors duration-200">
-                      {product.product_name}
-                    </h3>
+                    <div className="flex items-center justify-between mb-2 lg:mb-1">
+                      <h3 className="font-bold text-gray-900 text-sm sm:text-base lg:text-sm xl:text-sm line-clamp-2 leading-tight group-hover:text-gray-700 transition-colors duration-200 flex-1">
+                        {product.product_name}
+                      </h3>
+                      {product.type === 'deal' && product.old_price && product.old_price > product.price && (
+                        <span className="bg-red-500 text-white text-xs font-bold px-2 py-1 rounded ml-2 flex-shrink-0">
+                          -{Math.round(((product.old_price - product.price) / product.old_price) * 100)}%
+                        </span>
+                      )}
+                    </div>
 
                     {/* Description */}
                     {product.overview && (
@@ -335,10 +342,19 @@ const ProductGrid = ({ initialSearchQuery = '', initialCategoryId = '' }) => {
                     {/* Price */}
                     <div className="flex items-center justify-between">
                       <div className="text-sm sm:text-lg lg:text-sm xl:text-sm font-bold text-gray-900">
-                        <span className="text-blue-600">₦{parseFloat(product.price).toLocaleString()}</span>
-                        {product.default_storage && (
-                          <span className="text-xs lg:text-[10px] text-gray-400 block font-normal">{product.default_storage}</span>
-                        )}
+                        <div className="flex flex-col space-y-1">
+                          <div className="flex items-center space-x-2">
+                            <span className="text-blue-600">₦{parseFloat(product.price).toLocaleString()}</span>
+                            {product.type === 'deal' && product.old_price && product.old_price > product.price && (
+                              <span className="text-xs text-gray-500 line-through">
+                                ₦{parseFloat(product.old_price).toLocaleString()}
+                              </span>
+                            )}
+                          </div>
+                          {product.default_storage && (
+                            <span className="text-xs lg:text-[10px] text-gray-400 font-normal">{product.default_storage}</span>
+                          )}
+                        </div>
                       </div>
 
                       {product.in_stock ? (

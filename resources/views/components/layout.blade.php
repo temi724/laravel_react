@@ -4,6 +4,7 @@
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <meta name="csrf-token" content="{{ csrf_token() }}">
+        <meta name="description" content="Shop affordable, reliable laptops, phones & gadgets. UK used & brand-new devices at unbeatable prices. Trusted tech store near you – Buy smart, spend less!">
 
         <title>{{ $title ?? 'Murphylog global' }}</title>
 
@@ -43,9 +44,7 @@
                         <!-- Logo -->
                         <div class="flex-shrink-0">
                             <a href="/" class="flex items-center">
-                                <div class="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
-                                    <span class="text-white font-bold text-lg">Gy</span>
-                                </div>
+                                <img src="{{ asset('images/murphylogo.png') }}" alt="Murphylog Global" class="h-10 w-auto">
                                 <span class="ml-3 text-xl font-bold text-gray-900">Murphylog global</span>
                             </a>
                         </div>
@@ -86,9 +85,7 @@
                     <!-- Logo -->
                     <div class="flex-shrink-0">
                         <a href="/" class="flex items-center">
-                            <div class="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
-                                <span class="text-white font-bold text-lg">GS</span>
-                            </div>
+                            <img src="{{ asset('images/murphylogo.png') }}" alt="Murphylog Global" class="h-20 w-auto">
                             <span class="ml-3 text-xl font-bold text-gray-900">Murphylog global</span>
                         </a>
                     </div>
@@ -113,6 +110,7 @@
                         </a>
                     </div>
                 </div>
+
 
                 <!-- Navigation -->
                 <nav class="border-t border-gray-200">

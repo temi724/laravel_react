@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Edit API</title>
+    <meta name="csrf-token" content="csrf-token-placeholder">
+</head>
+<body>
+    <h1>Test Product Edit API</h1>
+    
+    <div id="result"></div>
+    
+    <script>
+        async function testEditAPI() {
+            const resultDiv = document.getElementById('result');
+            
+            try {
+                // First get a product to edit
+                const productsResponse = await fetch('http://127.0.0.1:8001/api/admin/products');
+                const productsData = await productsResponse.json();
+                
+                if (productsData.success && productsData.data && productsData.data.length > 0) {
+                    const product = productsData.data[0]; // Get first product
+                    resultDiv.innerHTML += `<p>Found product to edit: ${product.product_name} (ID: ${product.id})</p>`;
+                    
+                    // Create FormData like our React component does
+                    const formData = new FormData();
+                    formData.append('_method', 'PUT');
+                    formData.append('product_name', product.product_name + ' (Edited)');
+                    formData.append('category_id', product.category_id || '');
+                    formData.append('price', product.price);
+                    formData.append('overview', product.overview || 'Test edit overview');
+                    formData.append('description', product.description || 'Test edit description');
+                    formData.append('in_stock', product.in_stock ? '1' : '0');
+                    formData.append('product_status', product.product_status || 'new');
+                    
+                    // Add existing images
+                    if (product.images_url && product.images_url.length > 0) {
+                        product.images_url.forEach((url, index) => {
+                            formData.append(`existing_images[${index}]`, url);
+                        });
+                    }
+                    
+                    // Add colors if they exist
+                    if (product.colors && product.colors.length > 0) {
+                        product.colors.forEach((color, index) => {
+                            formData.append(`colors[${index}]`, color);
+                        });
+                    }
+                    
+                    // Test the edit API
+                    const editResponse = await fetch(`http://127.0.0.1:8001/api/admin/products/${product.id}`, {
+                        method: 'POST', // Using POST with _method=PUT
+                        body: formData
+                    });
+                    
+                    const editResult = await editResponse.json();
+                    
+                    if (editResponse.ok && editResult.success) {
+                        resultDiv.innerHTML += `<p style="color: green;">✅ Edit successful! ${editResult.message}</p>`;
+                        resultDiv.innerHTML += `<p>Updated product: ${editResult.product.product_name}</p>`;
+                    } else {
+                        resultDiv.innerHTML += `<p style="color: red;">❌ Edit failed: ${editResult.message}</p>`;
+                        if (editResult.errors) {
+                            resultDiv.innerHTML += `<p>Validation errors: ${JSON.stringify(editResult.errors)}</p>`;
+                        }
+                    }
+                } else {
+                    resultDiv.innerHTML += `<p style="color: orange;">No products found to edit</p>`;
+                }
+            } catch (error) {
+                resultDiv.innerHTML += `<p style="color: red;">Error: ${error.message}</p>`;
+            }
+        }
+        
+        // Run the test when page loads
+        window.onload = testEditAPI;
+    </script>
+</body>
+</html>

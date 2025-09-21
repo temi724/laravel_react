@@ -81,9 +81,15 @@ const useProductStore = create((set, get) => ({
       if (state.minPrice) params.min_price = state.minPrice;
       if (state.maxPrice) params.max_price = state.maxPrice;
       if (state.productStatus) params.status = state.productStatus;
-      if (state.searchQuery) params.q = state.searchQuery;
 
-      const response = await axios.get('/api/products', { params });
+      // Use search endpoint if there's a search query
+      let endpoint = '/api/products';
+      if (state.searchQuery) {
+        params.q = state.searchQuery;
+        endpoint = '/api/products/search';
+      }
+
+      const response = await axios.get(endpoint, { params });
 
       console.log('API Response:', response.data);
 
@@ -122,13 +128,11 @@ const useProductStore = create((set, get) => ({
       const response = await axios.get('/api/products/search', {
         params: {
           q: searchQuery,
-          limit: 5 // Limit search dropdown results
+          per_page: 5 // Limit search dropdown results
         }
       });
 
-      if (response.data.success) {
-        set({ searchResults: response.data.data });
-      }
+      set({ searchResults: response.data.data });
     } catch (error) {
       console.error('Error searching products:', error);
       set({ searchResults: [] });

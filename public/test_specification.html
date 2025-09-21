@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Specification Field</title>
+</head>
+<body>
+    <h1>Test Specification Field API</h1>
+    
+    <div id="result"></div>
+    
+    <script>
+        async function testSpecificationAPI() {
+            const resultDiv = document.getElementById('result');
+            
+            try {
+                // Test creating a product with specifications
+                const formData = new FormData();
+                formData.append('product_name', 'Test Product with Specs');
+                formData.append('price', '299.99');
+                formData.append('in_stock', '1');
+                formData.append('description', 'Test product for specification validation');
+                
+                // Add specifications in the new format
+                formData.append('specification[0][key]', 'Weight');
+                formData.append('specification[0][value]', '1.5kg');
+                formData.append('specification[1][key]', 'Dimensions');
+                formData.append('specification[1][value]', '20cm x 15cm x 10cm');
+                formData.append('specification[2][key]', 'Material');
+                formData.append('specification[2][value]', 'Premium plastic');
+                
+                const response = await fetch('http://127.0.0.1:8002/api/admin/products', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok && result.success) {
+                    resultDiv.innerHTML += `<p style="color: green;">✅ Product creation successful! ${result.message}</p>`;
+                    resultDiv.innerHTML += `<p>Created product: ${result.product.product_name}</p>`;
+                    if (result.product.specification) {
+                        resultDiv.innerHTML += `<p>Specifications: ${JSON.stringify(result.product.specification)}</p>`;
+                    }
+                } else {
+                    resultDiv.innerHTML += `<p style="color: red;">❌ Product creation failed: ${result.message}</p>`;
+                    if (result.errors) {
+                        resultDiv.innerHTML += `<p>Validation errors: ${JSON.stringify(result.errors)}</p>`;
+                    }
+                }
+            } catch (error) {
+                resultDiv.innerHTML += `<p style="color: red;">Error: ${error.message}</p>`;
+            }
+        }
+        
+        // Run the test when page loads
+        window.onload = testSpecificationAPI;
+    </script>
+</body>
+</html>
