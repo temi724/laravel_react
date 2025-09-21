@@ -31,16 +31,23 @@ const useCartStore = create(
         });
       },
 
-      addToCart: async (itemId, quantity = 1, type = 'product', selectedStorage = null, storagePrice = null, selectedColor = null) => {
+      addToCart: async (itemId, quantity = 1, type = 'product', selectedStorage = null, storagePrice = null, selectedColor = null, productData = null) => {
         console.log('AddToCart called with:', { itemId, quantity, type, selectedStorage, storagePrice, selectedColor });
         set({ isLoading: true });
 
         try {
-          // First get the product details
-          console.log('Fetching product details for ID:', itemId);
-          const productResponse = await axios.get(`/api/products/${itemId}`);
-          console.log('Product response:', productResponse.data);
-          const product = productResponse.data;
+          let product;
+
+          // Use provided product data if available, otherwise fetch
+          if (productData) {
+            product = productData;
+          } else {
+            // Fallback to API call for debugging or edge cases
+            console.log('Fetching product details for ID:', itemId);
+            const productResponse = await axios.get(`/api/products/${itemId}`);
+            console.log('Product response:', productResponse.data);
+            product = productResponse.data;
+          }
 
           if (!product) {
             throw new Error('Product not found');

@@ -8,6 +8,12 @@ const AdminSalesManager = () => {
   const [statusFilter, setStatusFilter] = useState('all');
   const [paymentFilter, setPaymentFilter] = useState('all');
   const [orderTypeFilter, setOrderTypeFilter] = useState('all');
+
+  // Date filter state
+  const [dateFilter, setDateFilter] = useState({
+    startDate: new Date(new Date().getFullYear(), 0, 1).toISOString().split('T')[0], // Jan 1st of current year
+    endDate: new Date().toISOString().split('T')[0] // Today
+  });
   const [expandedRows, setExpandedRows] = useState([]);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [confirmAction, setConfirmAction] = useState('');
@@ -20,7 +26,7 @@ const AdminSalesManager = () => {
 
   useEffect(() => {
     loadSales();
-  }, [search, statusFilter, paymentFilter, orderTypeFilter, currentPage]);
+  }, [search, statusFilter, paymentFilter, orderTypeFilter, dateFilter, currentPage]);
 
   const loadSales = async () => {
     try {
@@ -30,6 +36,8 @@ const AdminSalesManager = () => {
         status: statusFilter,
         payment: paymentFilter,
         order_type: orderTypeFilter,
+        start_date: dateFilter.startDate,
+        end_date: dateFilter.endDate,
         page: currentPage,
       });
 
@@ -46,11 +54,27 @@ const AdminSalesManager = () => {
   };
 
   const toggleRow = (saleId) => {
+    const wasExpanded = expandedRows.includes(saleId);
+
     setExpandedRows(prev =>
       prev.includes(saleId)
         ? prev.filter(id => id !== saleId)
         : [...prev, saleId]
     );
+
+    // If we're expanding a row, scroll it into view after a brief delay
+    if (!wasExpanded) {
+      setTimeout(() => {
+        const rowElement = document.querySelector(`[data-sale-id="${saleId}"]`);
+        if (rowElement) {
+          rowElement.scrollIntoView({
+            behavior: 'smooth',
+            block: 'center',
+            inline: 'nearest'
+          });
+        }
+      }, 100); // Small delay to allow the expansion animation to start
+    }
   };
 
   const handleStatusChange = async (saleId, newStatus) => {
@@ -111,7 +135,7 @@ const AdminSalesManager = () => {
     setConfirmMessage('');
   };
 
-  const formatPrice = (price) => `₦${parseFloat(price || 0).toLocaleString()}`;
+  const formatPrice = (price) => `₦${parseFloat(price || 0).toLocaleString('en-NG', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
   // Parse order details JSON
   const parseOrderDetails = (orderDetailsString) => {
@@ -184,7 +208,11 @@ const AdminSalesManager = () => {
 
     return (
       <>
-        <tr className="hover:bg-gray-50 cursor-pointer" onClick={() => toggleRow(sale.id)}>
+        <tr
+          className="hover:bg-gray-50 cursor-pointer"
+          onClick={() => toggleRow(sale.id)}
+          data-sale-id={sale.id}
+        >
           <td className="px-6 py-4 whitespace-nowrap">
             <div className="flex items-center space-x-2">
               <button
@@ -492,29 +520,36 @@ const AdminSalesManager = () => {
     <div className="max-w-7xl mx-auto px-4 space-y-6">
       {/* Page Header */}
       <div className="bg-white rounded-lg shadow-sm p-6">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
           <div>
             <h1 className="text-2xl font-bold text-gray-900">Sales Management</h1>
             <p className="mt-1 text-sm text-gray-600">Manage orders and customer transactions</p>
           </div>
-        </div>
-      </div>
 
-      {/* Header with Search and Filters */}
-      <div className="bg-white rounded-lg shadow-sm p-6">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div className="flex flex-col sm:flex-row gap-4 flex-1">
-            {/* Search */}
-            <div className="flex-1">
+          {/* Search Bar */}
+          <div className="flex-1 max-w-md">
+            <div className="relative">
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+              </div>
               <input
                 type="text"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="Search orders, customers..."
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
             </div>
+          </div>
+        </div>
+      </div>
 
+      {/* Filters */}
+      <div className="bg-white rounded-lg shadow-sm p-6">
+        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+          <div className="flex flex-col sm:flex-row gap-4 flex-1">
             {/* Status Filter */}
             <select
               value={statusFilter}
@@ -549,6 +584,38 @@ const AdminSalesManager = () => {
               <option value="pickup">Pickup</option>
               <option value="delivery">Delivery</option>
             </select>
+          </div>
+
+          {/* Date Filters and Refresh */}
+          <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center">
+            <div className="flex flex-col sm:flex-row gap-2 items-start sm:items-center">
+              <label className="text-sm font-medium text-slate-700 whitespace-nowrap">Date Range:</label>
+              <div className="flex gap-2">
+                <input
+                  type="date"
+                  value={dateFilter.startDate}
+                  onChange={(e) => setDateFilter({...dateFilter, startDate: e.target.value})}
+                  className="px-3 py-2 border border-slate-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+                <span className="text-slate-500 self-center">to</span>
+                <input
+                  type="date"
+                  value={dateFilter.endDate}
+                  onChange={(e) => setDateFilter({...dateFilter, endDate: e.target.value})}
+                  className="px-3 py-2 border border-slate-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+            </div>
+            <button
+              onClick={loadSales}
+              disabled={loading}
+              className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm"
+            >
+              <svg className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+              </svg>
+              <span>{loading ? 'Loading...' : 'Refresh'}</span>
+            </button>
           </div>
         </div>
       </div>

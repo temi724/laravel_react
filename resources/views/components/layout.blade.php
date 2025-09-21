@@ -16,6 +16,9 @@
         <!-- Styles -->
         @vite(['resources/css/app.css', 'resources/js/app.js'])
         @livewireStyles
+
+        <!-- Analytics Tracking Script -->
+        <script src="/js/analytics-tracker.js"></script>
     </head>
     <body class="bg-gray-50 font-sans antialiased">
         <!-- Header -->

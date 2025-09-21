@@ -391,7 +391,7 @@ Account Number: 5401799184`;
 
                   <div className="text-right">
                     <p className="text-xs font-medium text-gray-900">
-                      ₦{item.subtotal.toLocaleString()}
+                      ₦{item.subtotal.toLocaleString('en-NG', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </p>
                   </div>
                 </div>
@@ -402,7 +402,7 @@ Account Number: 5401799184`;
             <div className="space-y-2 border-t pt-3">
               <div className="flex justify-between text-xs">
                 <span>Subtotal ({cartCount} {cartCount === 1 ? 'item' : 'items'})</span>
-                <span>₦{cartTotal.toLocaleString()}</span>
+                <span>₦{cartTotal.toLocaleString('en-NG', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
               </div>
 
               {deliveryOption === 'delivery' && (
@@ -414,7 +414,7 @@ Account Number: 5401799184`;
 
               <div className="flex justify-between text-sm font-semibold border-t pt-2">
                 <span>Total</span>
-                <span>₦{cartTotal.toLocaleString()}{deliveryOption === 'delivery' ? ' + delivery' : ''}</span>
+                <span>₦{cartTotal.toLocaleString('en-NG', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}{deliveryOption === 'delivery' ? ' + delivery' : ''}</span>
               </div>
 
               {deliveryOption === 'delivery' && (
@@ -511,7 +511,7 @@ Account Number: 5401799184`;
 
                     <div className="flex justify-between pt-2">
                       <span className="text-base font-bold text-gray-900">Amount:</span>
-                      <span className="text-lg font-bold text-green-600">₦{cartTotal.toLocaleString()}</span>
+                      <span className="text-lg font-bold text-green-600">₦{cartTotal.toLocaleString('en-NG', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                     </div>
                   </div>
                 </div>

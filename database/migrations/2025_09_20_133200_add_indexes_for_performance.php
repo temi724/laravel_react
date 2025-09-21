@@ -3,6 +3,7 @@
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\DB;
 
 return new class extends Migration
 {
@@ -12,36 +13,82 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('products', function (Blueprint $table) {
-            // Index for product searches and filtering
-            $table->index(['product_name']);
-            $table->index(['price']);
-            $table->index(['in_stock']);
-            $table->index(['product_status']);
-            $table->index(['category_id']);
+            // Check existing indexes first and only add if they don't exist
+            $existingIndexes = DB::select("SHOW INDEX FROM products");
+            $indexNames = collect($existingIndexes)->pluck('Key_name')->toArray();
+
+            // Only add indexes if they don't already exist
+            if (!in_array('products_product_name_index', $indexNames)) {
+                $table->index(['product_name']);
+            }
+            if (!in_array('products_price_index', $indexNames)) {
+                $table->index(['price']);
+            }
+            if (!in_array('products_in_stock_index', $indexNames)) {
+                $table->index(['in_stock']);
+            }
+            if (!in_array('products_product_status_index', $indexNames)) {
+                $table->index(['product_status']);
+            }
+            if (!in_array('products_category_id_index', $indexNames)) {
+                $table->index(['category_id']);
+            }
 
             // Composite indexes for common queries
-            $table->index(['in_stock', 'product_status']);
-            $table->index(['category_id', 'in_stock']);
-            $table->index(['price', 'in_stock']);
+            if (!in_array('products_in_stock_product_status_index', $indexNames)) {
+                $table->index(['in_stock', 'product_status']);
+            }
+            if (!in_array('products_category_id_in_stock_index', $indexNames)) {
+                $table->index(['category_id', 'in_stock']);
+            }
+            if (!in_array('products_price_in_stock_index', $indexNames)) {
+                $table->index(['price', 'in_stock']);
+            }
         });
 
         Schema::table('sales', function (Blueprint $table) {
+            // Check existing indexes first and only add if they don't exist
+            $existingIndexes = DB::select("SHOW INDEX FROM sales");
+            $indexNames = collect($existingIndexes)->pluck('Key_name')->toArray();
+
             // Index for order lookups
-            $table->index(['created_at']);
-            $table->index(['payment_status']);
-            $table->index(['order_id']);
-            $table->index(['email']);
+            if (!in_array('sales_created_at_index', $indexNames)) {
+                $table->index(['created_at']);
+            }
+            if (!in_array('sales_payment_status_index', $indexNames)) {
+                $table->index(['payment_status']);
+            }
+            if (!in_array('sales_order_id_index', $indexNames)) {
+                $table->index(['order_id']);
+            }
+            if (!in_array('sales_emailaddress_index', $indexNames)) {
+                $table->index(['emailaddress']);
+            }
         });
 
         Schema::table('categories', function (Blueprint $table) {
+            // Check existing indexes first and only add if they don't exist
+            $existingIndexes = DB::select("SHOW INDEX FROM categories");
+            $indexNames = collect($existingIndexes)->pluck('Key_name')->toArray();
+
             // Index for category lookups
-            $table->index(['name']);
+            if (!in_array('categories_name_index', $indexNames)) {
+                $table->index(['name']);
+            }
         });
 
         Schema::table('deals', function (Blueprint $table) {
+            // Check existing indexes first and only add if they don't exist
+            $existingIndexes = DB::select("SHOW INDEX FROM deals");
+            $indexNames = collect($existingIndexes)->pluck('Key_name')->toArray();
+
             // Index for deals filtering
-            $table->index(['created_at']);
-            $table->index(['status']);
+            if (!in_array('deals_created_at_index', $indexNames)) {
+                $table->index(['created_at']);
+            }
+            if (!in_array('deals_product_status_index', $indexNames)) {
+                $table->index(['product_status']);
+            }
         });
     }
 
@@ -65,7 +112,7 @@ return new class extends Migration
             $table->dropIndex(['created_at']);
             $table->dropIndex(['payment_status']);
             $table->dropIndex(['order_id']);
-            $table->dropIndex(['email']);
+            $table->dropIndex(['emailaddress']);
         });
 
         Schema::table('categories', function (Blueprint $table) {
@@ -74,7 +121,7 @@ return new class extends Migration
 
         Schema::table('deals', function (Blueprint $table) {
             $table->dropIndex(['created_at']);
-            $table->dropIndex(['status']);
+            $table->dropIndex(['product_status']);
         });
     }
 };

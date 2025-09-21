@@ -49,9 +49,19 @@ const ProductGrid = ({ initialSearchQuery = '', initialCategoryId = '' }) => {
     setFilters({ [filterType]: value });
   };
 
-  const handleAddToCart = async (productId) => {
+  const handleAddToCart = async (product) => {
     try {
-      await addToCart(productId, 1, 'product');
+      await addToCart(product.id, 1, 'product', null, null, null, product);
+
+      // Track checkout event for analytics
+      if (window.trackCheckoutEvent) {
+        window.trackCheckoutEvent('cart_add', {
+          product_id: product.id,
+          product_name: product.name,
+          quantity: 1,
+          value: product.price
+        });
+      }
     } catch (error) {
       console.error('ProductGrid addToCart failed:', error);
     }
@@ -204,7 +214,15 @@ const ProductGrid = ({ initialSearchQuery = '', initialCategoryId = '' }) => {
           <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-2 sm:gap-4 lg:gap-3 mb-8">
             {products.map((product) => (
               <div key={product.id} className="bg-white rounded-xl border border-gray-100 hover:border-gray-200 hover:shadow-lg hover:shadow-gray-100/50 transition-all duration-300 ease-out group hover:-translate-y-1">
-                <a href={`/product/${product.id}`} className="block">
+                <a
+                  href={`/product/${product.id}`}
+                  className="block"
+                  onClick={() => {
+                    if (window.trackProductView) {
+                      window.trackProductView(product.id, product.name);
+                    }
+                  }}
+                >
                   {/* Product Image */}
                   <div className="aspect-square bg-gradient-to-br from-gray-50 to-gray-100 rounded-t-xl relative overflow-hidden">
                     {product.images_url && product.images_url.length > 0 ? (
@@ -274,7 +292,7 @@ const ProductGrid = ({ initialSearchQuery = '', initialCategoryId = '' }) => {
                           onClick={(e) => {
                             e.stopPropagation();
                             e.preventDefault();
-                            handleAddToCart(product.id);
+                            handleAddToCart(product);
                           }}
                           className="w-9 h-9 lg:w-7 lg:h-7 bg-blue-500/95 backdrop-blur-md rounded-xl lg:rounded-lg flex items-center justify-center hover:bg-blue-600 hover:scale-105 transition-all duration-200 shadow-lg hover:shadow-xl ring-1 ring-blue-400/20 text-white"
                           title="Add to Cart"
@@ -290,6 +308,9 @@ const ProductGrid = ({ initialSearchQuery = '', initialCategoryId = '' }) => {
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
+                            if (window.trackProductView) {
+                              window.trackProductView(product.id, product.name);
+                            }
                             window.location.href = `/product/${product.id}`;
                           }}
                           className="w-9 h-9 lg:w-7 lg:h-7 bg-white/95 backdrop-blur-md rounded-xl lg:rounded-lg flex items-center justify-center hover:bg-white hover:scale-105 transition-all duration-200 shadow-lg hover:shadow-xl ring-1 ring-black/5"
@@ -344,10 +365,10 @@ const ProductGrid = ({ initialSearchQuery = '', initialCategoryId = '' }) => {
                       <div className="text-sm sm:text-lg lg:text-sm xl:text-sm font-bold text-gray-900">
                         <div className="flex flex-col space-y-1">
                           <div className="flex items-center space-x-2">
-                            <span className="text-blue-600">₦{parseFloat(product.price).toLocaleString()}</span>
+                            <span className="text-blue-600">₦{parseFloat(product.price).toLocaleString('en-NG', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                             {product.type === 'deal' && product.old_price && product.old_price > product.price && (
                               <span className="text-xs text-gray-500 line-through">
-                                ₦{parseFloat(product.old_price).toLocaleString()}
+                                ₦{parseFloat(product.old_price).toLocaleString('en-NG', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                               </span>
                             )}
                           </div>
@@ -361,6 +382,9 @@ const ProductGrid = ({ initialSearchQuery = '', initialCategoryId = '' }) => {
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
+                            if (window.trackProductView) {
+                              window.trackProductView(product.id, product.name);
+                            }
                             window.location.href = `/product/${product.id}`;
                           }}
                           className="w-9 h-9 lg:w-7 lg:h-7 bg-gradient-to-r from-blue-50 to-indigo-50 text-blue-600 rounded-xl lg:rounded-lg hidden sm:flex items-center justify-center hover:from-blue-100 hover:to-indigo-100 hover:scale-105 transition-all duration-200 group/btn shadow-sm hover:shadow-md ring-1 ring-blue-100"
@@ -376,6 +400,9 @@ const ProductGrid = ({ initialSearchQuery = '', initialCategoryId = '' }) => {
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
+                            if (window.trackProductView) {
+                              window.trackProductView(product.id, product.name);
+                            }
                             window.location.href = `/product/${product.id}`;
                           }}
                           className="w-9 h-9 lg:w-7 lg:h-7 bg-gray-50 text-gray-400 rounded-xl lg:rounded-lg flex items-center justify-center hover:bg-gray-100 hover:scale-105 transition-all duration-200 group/btn shadow-sm hover:shadow-md ring-1 ring-gray-100"

@@ -67,6 +67,17 @@ const CartPage = () => {
     );
     if (item) {
       updateQuantity(itemIdentifier, item.quantity + 1);
+
+      // Track quantity increase
+      if (window.trackCheckoutEvent) {
+        window.trackCheckoutEvent('cart_update', {
+          product_id: item.product_id || item.id,
+          product_name: item.product_name || item.name,
+          old_quantity: item.quantity,
+          new_quantity: item.quantity + 1,
+          value: item.price || item.subtotal / item.quantity
+        });
+      }
     }
   };
 
@@ -76,7 +87,35 @@ const CartPage = () => {
     );
     if (item && item.quantity > 1) {
       updateQuantity(itemIdentifier, item.quantity - 1);
+
+      // Track quantity decrease
+      if (window.trackCheckoutEvent) {
+        window.trackCheckoutEvent('cart_update', {
+          product_id: item.product_id || item.id,
+          product_name: item.product_name || item.name,
+          old_quantity: item.quantity,
+          new_quantity: item.quantity - 1,
+          value: item.price || item.subtotal / item.quantity
+        });
+      }
     }
+  };
+
+  const handleRemoveFromCart = (itemIdentifier) => {
+    const item = cartItems.find(item =>
+      item.cartItemId === itemIdentifier || item.id === itemIdentifier
+    );
+
+    if (item && window.trackCheckoutEvent) {
+      window.trackCheckoutEvent('cart_remove', {
+        product_id: item.product_id || item.id,
+        product_name: item.product_name || item.name,
+        quantity: item.quantity,
+        value: item.subtotal || item.price
+      });
+    }
+
+    removeFromCart(itemIdentifier);
   };
 
   if (isLoading) {
@@ -143,7 +182,7 @@ const CartPage = () => {
                     <div className="flex-1 min-w-0 space-y-1 sm:space-y-1.5">
                       <div>
                         <h3 className="text-sm sm:text-base font-semibold text-gray-900 mb-0.5 line-clamp-2">{item.name}</h3>
-                        <p className="text-xs text-gray-600 font-medium">₦{item.price.toLocaleString()}</p>
+                        <p className="text-xs text-gray-600 font-medium">₦{item.price.toLocaleString('en-NG', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
                       </div>
                       {item.selected_storage && (
                         <div>
@@ -194,12 +233,12 @@ const CartPage = () => {
                     <div className="text-right space-y-1 sm:space-y-2">
                       <div>
                         <p className="text-sm sm:text-base font-bold text-gray-900">
-                          ₦{item.subtotal.toLocaleString()}
+                          ₦{item.subtotal.toLocaleString('en-NG', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                         </p>
                         <p className="text-xs text-gray-500">Total</p>
                       </div>
                       <button
-                        onClick={() => removeFromCart(item.cartItemId || item.id)}
+                        onClick={() => handleRemoveFromCart(item.cartItemId || item.id)}
                         className="inline-flex items-center px-1.5 sm:px-2 py-1 text-xs font-medium text-red-600 hover:text-red-700 hover:bg-red-50 border border-red-200 rounded transition-colors"
                         disabled={isLoading}
                       >
@@ -224,12 +263,12 @@ const CartPage = () => {
               <div className="space-y-2 mb-4">
                 <div className="flex justify-between items-center text-xs">
                   <span className="text-gray-600">Subtotal ({cartCount} {cartCount === 1 ? 'item' : 'items'})</span>
-                  <span className="font-medium text-gray-900">₦{cartTotal.toLocaleString()}</span>
+                  <span className="font-medium text-gray-900">₦{cartTotal.toLocaleString('en-NG', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                 </div>
                 <hr className="border-gray-200" />
                 <div className="flex justify-between items-center">
                   <span className="text-sm font-semibold text-gray-900">Total</span>
-                  <span className="text-lg font-bold text-gray-900">₦{cartTotal.toLocaleString()}</span>
+                  <span className="text-lg font-bold text-gray-900">₦{cartTotal.toLocaleString('en-NG', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                 </div>
               </div>
 
@@ -237,6 +276,15 @@ const CartPage = () => {
                 <a
                   href="/checkout"
                   className="block w-full bg-blue-600 text-white text-center py-2.5 px-4 rounded-md font-semibold hover:bg-blue-700 transform hover:scale-105 transition-all duration-200 shadow-md hover:shadow-lg text-sm"
+                  onClick={() => {
+                    if (window.trackCheckoutEvent) {
+                      window.trackCheckoutEvent('checkout_initiated', {
+                        cart_total: cartTotal,
+                        cart_items: cartItems.length,
+                        cart_value: cartItems.reduce((total, item) => total + (item.subtotal || item.price * item.quantity), 0)
+                      });
+                    }
+                  }}
                 >
                   Proceed to Checkout
                 </a>

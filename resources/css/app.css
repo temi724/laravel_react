@@ -31,3 +31,31 @@
     -webkit-box-orient: vertical;
     overflow: hidden;
 }
+
+/* Receipt printing styles */
+body.printing-receipt {
+    background: white !important;
+}
+
+body.printing-receipt * {
+    background-color: #ffffff !important;
+    color: #000000 !important;
+    border-color: #000000 !important;
+    font-family: Arial, sans-serif !important;
+    box-shadow: none !important;
+    outline: none !important;
+    text-shadow: none !important;
+}
+
+body.printing-receipt #receipt-content {
+    background-color: #ffffff !important;
+    color: #000000 !important;
+    border: 1px solid #000000 !important;
+    box-shadow: none !important;
+}
+
+body.printing-receipt #receipt-content img {
+    max-width: 60px !important;
+    height: auto !important;
+    border: none !important;
+}

@@ -19,6 +19,13 @@ Route::get('products/search', [ProductController::class, 'search']);
 Route::get('products/category/{categoryId}', [ProductController::class, 'productsByCategory']);
 Route::get('products/{id}', [ProductController::class, 'show']);
 
+// Analytics tracking routes - Public routes (no authentication required)
+Route::post('analytics/page-visit', [AdminController::class, 'trackPageVisit']);
+Route::post('analytics/product-view', [AdminController::class, 'trackProductView']);
+Route::post('analytics/session', [AdminController::class, 'trackSession']);
+Route::post('analytics/session-update', [AdminController::class, 'updateSessionActivity']);
+Route::post('analytics/checkout-event', [AdminController::class, 'trackCheckoutEvent']);
+
 // Cart API routes - Need session support for cart storage
 Route::middleware(['web'])->group(function () {
     Route::get('cart', [CartController::class, 'index']);
@@ -83,6 +90,15 @@ Route::middleware(['web', 'admin.auth'])->group(function () {
     Route::get('admin/top-selling', [AdminController::class, 'getTopSellingItems']);
     Route::put('admin/sales/{id}/status', [AdminController::class, 'updateSaleStatus']);
     Route::put('admin/sales/{id}/payment-status', [AdminController::class, 'updateSalePaymentStatus']);
+
+    // Offline sales routes
+    Route::post('admin/offline-sales', [AdminController::class, 'createOfflineSale']);
+    Route::get('admin/offline-sales', [AdminController::class, 'getOfflineSales']);
+
+    // Analytics routes
+    Route::get('admin/analytics/overview', [AdminController::class, 'getAnalyticsOverview']);
+    Route::get('admin/analytics/traffic-sources', [AdminController::class, 'getTrafficSources']);
+    Route::get('admin/analytics/conversion-funnel', [AdminController::class, 'getConversionFunnel']);
 });
 // Custom routes if needed
 // Route::get('/products/in-stock', [ProductController::class, 'inStock']);

@@ -4,6 +4,12 @@ import useCartStore from '../stores/cartStore';
 const ProductShow = ({ productid, producttype = 'product' }) => {
   console.log('ProductShow component initialized with:', { productid, producttype });
 
+  // Currency formatting function to ensure thousands separators
+  const formatCurrency = (amount) => {
+    const num = parseFloat(amount || 0);
+    return `₦${num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  };
+
   // Early return for debugging
   if (!productid) {
     return (
@@ -52,6 +58,11 @@ const ProductShow = ({ productid, producttype = 'product' }) => {
         if (data) {
           setProduct(data);
           setType(data.type || producttype);
+
+          // Track product view for analytics
+          if (window.trackProductView) {
+            window.trackProductView(data.id, data.product_name);
+          }
 
           // Initialize color selection
           if (data.colors && data.colors.length > 0) {
@@ -135,8 +146,21 @@ const ProductShow = ({ productid, producttype = 'product' }) => {
         type,
         selectedStorage,
         selectedPrice,
-        selectedColor
+        selectedColor,
+        product  // Pass the product data directly
       );
+
+      // Track add to cart event for analytics
+      if (window.trackCheckoutEvent) {
+        window.trackCheckoutEvent('cart_view', {
+          id: product.id,
+          name: product.product_name,
+          price: selectedPrice,
+          quantity: 1,
+          storage: selectedStorage,
+          color: selectedColor
+        }, selectedPrice);
+      }
 
       // Show success feedback
       const toast = document.createElement('div');
@@ -334,24 +358,24 @@ const ProductShow = ({ productid, producttype = 'product' }) => {
           <div className="bg-gradient-to-r from-gray-50 to-white border border-gray-200 rounded-xl p-6">
             <div className="flex flex-wrap items-baseline gap-2 sm:gap-3">
               <span id="current-price" className="text-2xl sm:text-3xl font-bold text-red-600">
-                ₦{selectedPrice.toLocaleString('en-NG', {minimumFractionDigits: 2})}
+                {formatCurrency(selectedPrice)}
               </span>
               {type === 'deal' && product.old_price && product.old_price > product.price ? (
                 <>
                   <span className="text-base sm:text-lg text-gray-500 line-through">
-                    ₦{product.old_price.toLocaleString('en-NG', {minimumFractionDigits: 2})}
+                    {formatCurrency(product.old_price)}
                   </span>
                   <span className="bg-red-100 text-red-800 text-xs sm:text-sm font-medium px-1.5 sm:px-2 py-1 rounded">
-                    SAVE ₦{(product.old_price - product.price).toLocaleString('en-NG', {minimumFractionDigits: 2})}
+                    SAVE {formatCurrency(product.old_price - product.price)}
                   </span>
                 </>
               ) : type === 'product' && selectedPrice > 500 ? (
                 <>
                   <span id="old-price" className="text-base sm:text-lg text-gray-500 line-through">
-                    ₦{(selectedPrice * 1.2).toLocaleString('en-NG', {minimumFractionDigits: 2})}
+                    {formatCurrency(selectedPrice * 1.2)}
                   </span>
                   <span id="savings" className="bg-red-100 text-red-800 text-xs sm:text-sm font-medium px-1.5 sm:px-2 py-1 rounded">
-                    SAVE ₦{(selectedPrice * 0.2).toLocaleString('en-NG', {minimumFractionDigits: 2})}
+                    SAVE {formatCurrency(selectedPrice * 0.2)}
                   </span>
                 </>
               ) : null}
@@ -690,7 +714,7 @@ const ProductShow = ({ productid, producttype = 'product' }) => {
                     )}
                     <div className="flex items-center justify-between">
                       <div className="text-lg font-bold text-gray-900">
-                        ₦{relatedProduct.price.toLocaleString('en-NG', {minimumFractionDigits: 2})}
+                        {formatCurrency(relatedProduct.price)}
                       </div>
                       {relatedProduct.in_stock ? (
                         <button className="w-8 h-8 bg-blue-50 text-blue-600 rounded-full flex items-center justify-center hover:bg-blue-100 transition-colors group">

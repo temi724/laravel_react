@@ -38,7 +38,17 @@ class Sales extends Model
         'delivery_address',
         'payment_method',
         'total_amount',
-        'order_items'
+        'order_items',
+        // Offline sales fields
+        'phone',
+        'address',
+        'status',
+        'notes',
+        'sale_date',
+        'receipt_number',
+        'sale_type',
+        'subtotal',
+        'tax_amount'
     ];
 
     protected $casts = [
@@ -48,6 +58,8 @@ class Sales extends Model
         'order_status' => 'boolean',
         'quantity' => 'integer',
         'total_amount' => 'decimal:2',
+        'subtotal' => 'decimal:2',
+        'tax_amount' => 'decimal:2',
         'payment_status' => 'string',
         'completed_at' => 'datetime',
         'payment_approved_at' => 'datetime'

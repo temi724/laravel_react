@@ -41,7 +41,7 @@ const CartItem = ({ item, onUpdateQuantity, onRemove, isLoading = false }) => {
       {/* Product Details */}
       <div className="flex-1 min-w-0">
         <h4 className="text-sm font-medium text-gray-900 truncate">{item.name}</h4>
-        <p className="text-sm text-gray-500">₦{item.price.toLocaleString()}</p>
+        <p className="text-sm text-gray-500">₦{item.price.toLocaleString('en-NG', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
 
         {item.selected_storage && (
           <p className="text-xs text-blue-600 mt-1">
@@ -84,7 +84,7 @@ const CartItem = ({ item, onUpdateQuantity, onRemove, isLoading = false }) => {
       {/* Price and Remove */}
       <div className="text-right">
         <p className="text-sm font-medium text-gray-900">
-          ₦{item.subtotal.toLocaleString()}
+          ₦{item.subtotal.toLocaleString('en-NG', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
         </p>
         <button
           onClick={() => onRemove(item.id)}

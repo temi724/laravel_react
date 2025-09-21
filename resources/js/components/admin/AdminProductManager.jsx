@@ -72,7 +72,7 @@ const AdminProductManager = () => {
     }
   };
 
-  const formatPrice = (price) => `₦${parseFloat(price).toLocaleString()}`;
+  const formatPrice = (price) => `₦${parseFloat(price).toLocaleString('en-NG', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
   const ItemRow = ({ item, type }) => (
     <tr className="hover:bg-gray-50">

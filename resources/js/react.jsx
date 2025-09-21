@@ -1,7 +1,7 @@
 import React from 'react';
 import { createRoot } from 'react-dom/client';
 
-// Import all components
+// Import customer-facing components (loaded immediately as they're used more frequently)
 import Cart from './components/Cart.jsx';
 import CartPage from './components/CartPage.jsx';
 import ProductGrid from './components/ProductGrid.jsx';
@@ -10,12 +10,15 @@ import CheckoutPage from './components/CheckoutPage.jsx';
 import CartCounter from './components/CartCounter.jsx';
 import ProductShow from './components/ProductShow.jsx';
 
-// Import admin components
-import AdminLogin from './components/admin/AdminLogin.jsx';
-import AdminDashboard from './components/admin/AdminDashboard.jsx';
-import AdminProductManager from './components/admin/AdminProductManager.jsx';
-import AdminSalesManager from './components/admin/AdminSalesManager.jsx';
-import AdminOrderManager from './components/admin/AdminOrderManager.jsx';
+// Import lazy admin components (loaded only when needed)
+import {
+  LazyAdminLogin,
+  LazyAdminDashboard,
+  LazyAdminProductManager,
+  LazyAdminSalesManager,
+  LazyAdminOrderManager,
+  LazyOfflineSales,
+} from './components/admin/LazyAdminComponents.jsx';
 
 // Import stores
 import useCartStore from './stores/cartStore.js';
@@ -29,12 +32,13 @@ const components = {
   CheckoutPage,
   CartCounter,
   ProductShow,
-  // Admin components
-  AdminLogin,
-  AdminDashboard,
-  AdminProductManager,
-  AdminSalesManager,
-  AdminOrderManager,
+  // Admin components (lazy loaded)
+  AdminLogin: LazyAdminLogin,
+  AdminDashboard: LazyAdminDashboard,
+  AdminProductManager: LazyAdminProductManager,
+  AdminSalesManager: LazyAdminSalesManager,
+  AdminOrderManager: LazyAdminOrderManager,
+  OfflineSales: LazyOfflineSales,
 };
 
 // Function to initialize React components
@@ -103,10 +107,10 @@ export {
   SearchBar,
   CheckoutPage,
   ProductShow,
-  // Admin components
-  AdminLogin,
-  AdminDashboard,
-  AdminProductManager,
-  AdminSalesManager,
-  AdminOrderManager,
+  // Admin components (lazy loaded)
+  LazyAdminLogin as AdminLogin,
+  LazyAdminDashboard as AdminDashboard,
+  LazyAdminProductManager as AdminProductManager,
+  LazyAdminSalesManager as AdminSalesManager,
+  LazyAdminOrderManager as AdminOrderManager,
 };

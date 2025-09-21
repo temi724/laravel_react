@@ -123,7 +123,7 @@ const AdminOrderManager = () => {
     }
   };
 
-  const formatPrice = (price) => `₦${parseFloat(price || 0).toLocaleString()}`;
+  const formatPrice = (price) => `₦${parseFloat(price || 0).toLocaleString('en-NG', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
   const getStatusBadge = (status) => {
     const completed = status;
