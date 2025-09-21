@@ -43,10 +43,10 @@ const InvoiceView = ({ sale, onClose }) => {
     const handlePrint = () => {
         // Add a class to the body to hide everything except invoice content
         document.body.classList.add('printing-invoice');
-        
+
         // Trigger print
         window.print();
-        
+
         // Remove the class after printing
         setTimeout(() => {
             document.body.classList.remove('printing-invoice');
@@ -138,8 +138,8 @@ const InvoiceView = ({ sale, onClose }) => {
                                 <div className="flex">
                                     <span className="font-medium text-gray-700 w-20">Status:</span>
                                     <span className={`px-2 py-1 rounded text-xs font-medium ${
-                                        sale.payment_status === 'paid' 
-                                            ? 'bg-green-100 text-green-800' 
+                                        sale.payment_status === 'paid'
+                                            ? 'bg-green-100 text-green-800'
                                             : 'bg-yellow-100 text-yellow-800'
                                     }`}>
                                         {sale.payment_status === 'paid' ? 'Paid' : sale.payment_status?.charAt(0).toUpperCase() + sale.payment_status?.slice(1)}
@@ -248,12 +248,12 @@ const InvoiceView = ({ sale, onClose }) => {
                     body.printing-invoice * {
                         visibility: hidden;
                     }
-                    
+
                     body.printing-invoice #invoice-content,
                     body.printing-invoice #invoice-content * {
                         visibility: visible;
                     }
-                    
+
                     body.printing-invoice #invoice-content {
                         position: absolute;
                         left: 0;
@@ -267,27 +267,27 @@ const InvoiceView = ({ sale, onClose }) => {
                         border-radius: 0 !important;
                         background: white !important;
                     }
-                    
+
                     .print\\:hidden {
                         display: none !important;
                     }
-                    
+
                     .print\\:p-6 {
                         padding: 1.5rem !important;
                     }
-                    
+
                     .print\\:shadow-none {
                         box-shadow: none !important;
                     }
-                    
+
                     .print\\:max-w-none {
                         max-width: none !important;
                     }
-                    
+
                     .print\\:max-h-none {
                         max-height: none !important;
                     }
-                    
+
                     .print\\:overflow-visible {
                         overflow: visible !important;
                     }

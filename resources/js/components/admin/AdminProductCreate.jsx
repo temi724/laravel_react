@@ -151,7 +151,7 @@ const AdminProductCreate = ({ onCancel, onSuccess }) => {
 
     try {
       const submitData = new FormData();
-      
+
       // Add form data
       Object.keys(formData).forEach(key => {
         if (key === 'is_deal' || key === 'in_stock' || key === 'out_of_stock' || key === 'has_storage') {

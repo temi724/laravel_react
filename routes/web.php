@@ -175,17 +175,17 @@ Route::prefix('admin')->middleware(['web', 'admin.auth'])->group(function () {
         // Parse order details and calculate total
         $orderDetails = $sale->order_details ?: [];
         $total = collect($orderDetails)->sum('subtotal');
-        
+
         // Add calculated total to sale object for the view
         $sale->calculated_total = $total;
 
         // Generate PDF using DomPDF with proper facade and UTF-8 encoding
         $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('admin.invoice-pdf', compact('sale', 'orderDetails', 'total'));
-        
+
         // Set UTF-8 encoding options
         $pdf->getDomPDF()->getOptions()->set('isHtml5ParserEnabled', true);
         $pdf->getDomPDF()->getOptions()->set('isPhpEnabled', true);
-        
+
         return $pdf->download("invoice-{$saleId}.pdf");
     })->name('admin.invoice.pdf');
 });

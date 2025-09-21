@@ -87,7 +87,7 @@ const AdminProductEdit = ({ item, onCancel, onSuccess }) => {
       file: file,
       isExisting: false
     }));
-    
+
     setProductImages(prev => [...prev, ...newImages]);
   };
 
@@ -100,7 +100,7 @@ const AdminProductEdit = ({ item, onCancel, onSuccess }) => {
   };
 
   const updateStorageOption = (index, field, value) => {
-    setStorageOptions(prev => prev.map((option, i) => 
+    setStorageOptions(prev => prev.map((option, i) =>
       i === index ? { ...option, [field]: value } : option
     ));
   };
@@ -117,10 +117,10 @@ const AdminProductEdit = ({ item, onCancel, onSuccess }) => {
 
     try {
       const submitData = new FormData();
-      
+
       // Add _method for Laravel PUT request
       submitData.append('_method', 'PUT');
-      
+
       // Add form data
       Object.keys(formData).forEach(key => {
         if (key === 'in_stock' || key === 'has_storage') {
@@ -168,7 +168,7 @@ const AdminProductEdit = ({ item, onCancel, onSuccess }) => {
       const existingImageUrls = productImages
         .filter(img => img.isExisting)
         .map(img => img.url);
-      
+
       existingImageUrls.forEach((url, index) => {
         submitData.append(`existing_images[${index}]`, url);
       });
@@ -359,7 +359,7 @@ const AdminProductEdit = ({ item, onCancel, onSuccess }) => {
             {/* Product Images */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Product Images</label>
-              
+
               {/* Image Upload */}
               <div className="mb-4">
                 <input

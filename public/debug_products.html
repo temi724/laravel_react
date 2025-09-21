@@ -5,52 +5,52 @@
 </head>
 <body>
     <h1>Product Grid Debug</h1>
-    
+
     <div id="result"></div>
-    
+
     <script>
         async function testProductAPI() {
             const resultDiv = document.getElementById('result');
-            
+
             try {
                 // Test without any filters
                 resultDiv.innerHTML += '<h3>Testing /api/products (no filters)</h3>';
                 const response1 = await fetch('http://127.0.0.1:8002/api/products?per_page=50');
                 const data1 = await response1.json();
-                
+
                 resultDiv.innerHTML += `<p>Total items: ${data1.total}</p>`;
                 resultDiv.innerHTML += `<p>Current page: ${data1.current_page}</p>`;
                 resultDiv.innerHTML += `<p>Last page: ${data1.last_page}</p>`;
                 resultDiv.innerHTML += `<p>Items returned: ${data1.data.length}</p>`;
-                
+
                 if (data1.data.length > 0) {
                     resultDiv.innerHTML += '<h4>First few items:</h4>';
                     data1.data.slice(0, 3).forEach((item, index) => {
                         resultDiv.innerHTML += `<p>${index + 1}. ${item.product_name} (${item.type}) - $${item.price}</p>`;
                     });
                 }
-                
+
                 // Test with default pagination
                 resultDiv.innerHTML += '<h3>Testing /api/products (default pagination)</h3>';
                 const response2 = await fetch('http://127.0.0.1:8002/api/products');
                 const data2 = await response2.json();
-                
+
                 resultDiv.innerHTML += `<p>Default per_page items: ${data2.data.length}</p>`;
                 resultDiv.innerHTML += `<p>Total available: ${data2.total}</p>`;
-                
+
                 // Test in-stock filter
                 resultDiv.innerHTML += '<h3>Testing in_stock filter</h3>';
                 const response3 = await fetch('http://127.0.0.1:8002/api/products?in_stock=true&per_page=50');
                 const data3 = await response3.json();
-                
+
                 resultDiv.innerHTML += `<p>In-stock items: ${data3.data.length}</p>`;
                 resultDiv.innerHTML += `<p>Total in-stock: ${data3.total}</p>`;
-                
+
             } catch (error) {
                 resultDiv.innerHTML += `<p style="color: red;">Error: ${error.message}</p>`;
             }
         }
-        
+
         // Run the test when page loads
         window.onload = testProductAPI;
     </script>

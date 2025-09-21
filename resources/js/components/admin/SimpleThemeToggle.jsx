@@ -2,10 +2,10 @@ import React from 'react';
 
 const SimpleThemeToggle = () => {
   console.log('SimpleThemeToggle rendering...');
-  
+
   const handleClick = () => {
     console.log('Simple button clicked!');
-    
+
     // Test if we can toggle dark class manually
     if (document.documentElement.classList.contains('dark')) {
       document.documentElement.classList.remove('dark');
@@ -14,10 +14,10 @@ const SimpleThemeToggle = () => {
       document.documentElement.classList.add('dark');
       console.log('Added dark class');
     }
-    
+
     console.log('Current HTML classes:', document.documentElement.className);
   };
-  
+
   return (
     <button
       onClick={handleClick}

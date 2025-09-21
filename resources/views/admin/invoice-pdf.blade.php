@@ -105,7 +105,7 @@
                 <span class="label">Date:</span> {{ $sale->created_at->format('F j, Y') }}
             </div>
             <div class="info-item">
-                <span class="label">Status:</span> 
+                <span class="label">Status:</span>
                 @if($sale->payment_status === 'paid')
                     Paid
                 @else
@@ -129,7 +129,7 @@
             @endif
             @if($sale->city || $sale->state)
             <div class="info-item">
-                <span class="label">Location:</span> 
+                <span class="label">Location:</span>
                 {{ $sale->city }}{{ $sale->city && $sale->state ? ', ' : '' }}{{ $sale->state }}
             </div>
             @endif

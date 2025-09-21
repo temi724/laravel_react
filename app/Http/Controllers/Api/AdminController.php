@@ -378,7 +378,7 @@ class AdminController extends Controller
     {
         try {
             $typeFilter = $request->get('type', 'all');
-            
+
             $products = collect();
             $deals = collect();
 
@@ -542,10 +542,10 @@ class AdminController extends Controller
                     if ($image && $image->isValid()) {
                         // Generate a unique filename
                         $filename = Str::random(40) . '.' . $image->getClientOriginalExtension();
-                        
+
                         // Store the image in the images/products directory
                         $path = Storage::disk('images')->putFileAs('products', $image, $filename);
-                        
+
                         // Generate the public URL
                         $uploadedImageUrls[] = '/images/products/' . $filename;
                     }
@@ -629,10 +629,10 @@ class AdminController extends Controller
                     if ($image && $image->isValid()) {
                         // Generate a unique filename
                         $filename = Str::random(40) . '.' . $image->getClientOriginalExtension();
-                        
+
                         // Store the image in the images/products directory
                         $path = Storage::disk('images')->putFileAs('products', $image, $filename);
-                        
+
                         // Generate the public URL
                         $uploadedImageUrls[] = '/images/products/' . $filename;
                     }
@@ -872,7 +872,7 @@ class AdminController extends Controller
                     ->where('payment_status', 'completed')
                     ->where('order_status', 1)
                     ->get();
-                
+
                 $totalRevenue = 0;
                 foreach ($sales as $sale) {
                     $orderDetails = $sale->order_details ?: [];
@@ -880,7 +880,7 @@ class AdminController extends Controller
                         $totalRevenue += floatval($detail['subtotal'] ?? 0);
                     }
                 }
-                
+
                 $result[] = [
                     'month' => $monthData->month_short,
                     'sales' => intval($monthData->sales_count),
@@ -1023,7 +1023,7 @@ class AdminController extends Controller
 
             // Handle image management
             $imageUrls = [];
-            
+
             // Keep existing images that weren't removed
             if ($request->has('existing_images')) {
                 $imageUrls = $request->input('existing_images');
@@ -1035,10 +1035,10 @@ class AdminController extends Controller
                     if ($image && $image->isValid()) {
                         // Generate a unique filename
                         $filename = Str::random(40) . '.' . $image->getClientOriginalExtension();
-                        
+
                         // Store the image in the images/products directory
                         $path = Storage::disk('images')->putFileAs('products', $image, $filename);
-                        
+
                         // Generate the public URL
                         $imageUrls[] = '/images/products/' . $filename;
                     }
@@ -1163,7 +1163,7 @@ class AdminController extends Controller
 
             // Handle image management
             $imageUrls = [];
-            
+
             // Keep existing images that weren't removed
             if ($request->has('existing_images')) {
                 $imageUrls = $request->input('existing_images');
@@ -1175,10 +1175,10 @@ class AdminController extends Controller
                     if ($image && $image->isValid()) {
                         // Generate a unique filename
                         $filename = Str::random(40) . '.' . $image->getClientOriginalExtension();
-                        
+
                         // Store the image in the images/products directory
                         $path = Storage::disk('images')->putFileAs('products', $image, $filename);
-                        
+
                         // Generate the public URL
                         $imageUrls[] = '/images/products/' . $filename;
                     }

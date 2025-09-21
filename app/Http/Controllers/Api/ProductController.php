@@ -110,7 +110,7 @@ class ProductController extends Controller
         // Apply sorting
         $sortBy = $request->get('sort_by', 'created_at');
         $sortDirection = $request->get('sort_direction', 'desc');
-        
+
         $combined = $combined->sortBy($sortBy, SORT_REGULAR, $sortDirection === 'desc');
 
         // Manual pagination
