@@ -4,6 +4,16 @@ import useCartStore from '../stores/cartStore';
 const ProductShow = ({ productid, producttype = 'product' }) => {
   console.log('ProductShow component initialized with:', { productid, producttype });
 
+  // Helper function to generate SEO-friendly product URL
+  const generateProductUrl = (product) => {
+    const slug = product.product_name?.toLowerCase()
+      .replace(/[^\w\s-]/g, '') // Remove special characters
+      .replace(/\s+/g, '-')     // Replace spaces with hyphens
+      .replace(/-+/g, '-')      // Replace multiple hyphens with single hyphen
+      .trim();
+    return `/product/${product.id}/${slug}`;
+  };
+
   // Currency formatting function to ensure thousands separators
   const formatCurrency = (amount) => {
     const num = parseFloat(amount || 0);
@@ -244,8 +254,10 @@ const ProductShow = ({ productid, producttype = 'product' }) => {
                   <img
                     key={index}
                     src={image}
-                    alt={product.product_name}
+                    alt={`${product.product_name} - Image ${index + 1}`}
                     loading={index === 0 ? "eager" : "lazy"} // Load first image immediately, others lazily
+                    decoding={index === 0 ? "sync" : "async"}
+                    fetchpriority={index === 0 ? "high" : "low"}
                     className={`w-full h-full object-contain p-4 sm:p-8 cursor-zoom-in transition-opacity duration-300 ${
                       currentImage === index ? 'opacity-100' : 'opacity-0 absolute inset-0'
                     }`}
@@ -283,8 +295,9 @@ const ProductShow = ({ productid, producttype = 'product' }) => {
                   >
                     <img
                       src={image}
-                      alt={`${product.product_name} thumbnail`}
+                      alt={`${product.product_name} thumbnail ${index + 1}`}
                       loading="lazy"
+                      decoding="async"
                       className="w-full h-full object-contain p-1"
                     />
                   </button>
@@ -670,12 +683,14 @@ const ProductShow = ({ productid, producttype = 'product' }) => {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {relatedProducts.slice(0, 8).map((relatedProduct) => (
               <div key={relatedProduct.id} className="bg-white rounded-lg border border-gray-100 hover:border-gray-200 transition-colors duration-200 group">
-                <a href={`/product/${relatedProduct.id}`} className="block">
+                <a href={generateProductUrl(relatedProduct)} className="block">
                   <div className="aspect-square bg-gray-100 rounded-t-lg relative overflow-hidden">
                     {relatedProduct.images_url && relatedProduct.images_url.length > 0 ? (
                       <img
                         src={relatedProduct.images_url[0]}
-                        alt={relatedProduct.product_name}
+                        alt={`${relatedProduct.product_name} - Related product`}
+                        loading="lazy"
+                        decoding="async"
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                         onError={(e) => {
                           e.target.style.display = 'none';

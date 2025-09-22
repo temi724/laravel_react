@@ -3,6 +3,16 @@
 use Illuminate\Foundation\Application;
 use Illuminate\Http\Request;
 
+// Security: Hide X-Powered-By header
+if (function_exists('header_remove')) {
+    header_remove('X-Powered-By');
+}
+
+// Alternative method for hiding X-Powered-By
+if (function_exists('ini_set')) {
+    ini_set('expose_php', 'off');
+}
+
 define('LARAVEL_START', microtime(true));
 
 // Determine if the application is in maintenance mode...

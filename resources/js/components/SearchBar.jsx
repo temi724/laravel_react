@@ -14,6 +14,16 @@ const SearchBar = ({ onSearch, placeholder = "Search for products..." }) => {
   const searchRef = useRef(null);
   const timeoutRef = useRef(null);
 
+  // Helper function to generate SEO-friendly product URL
+  const generateProductUrl = (product) => {
+    const slug = product.product_name?.toLowerCase()
+      .replace(/[^\w\s-]/g, '') // Remove special characters
+      .replace(/\s+/g, '-')     // Replace spaces with hyphens
+      .replace(/-+/g, '-')      // Replace multiple hyphens with single hyphen
+      .trim();
+    return `/product/${product.id}/${slug}`;
+  };
+
   // Handle clicks outside to close dropdown
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -71,7 +81,7 @@ const SearchBar = ({ onSearch, placeholder = "Search for products..." }) => {
   const handleResultClick = (product) => {
     hideSearchDropdown();
     setIsInputFocused(false);
-    window.location.href = `/product/${product.id}`;
+    window.location.href = generateProductUrl(product);
   };
 
   const highlightMatch = (text, query) => {

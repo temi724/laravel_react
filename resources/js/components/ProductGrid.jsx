@@ -28,6 +28,16 @@ const ProductGrid = ({ initialSearchQuery = '', initialCategoryId = '' }) => {
 
   const [categories, setCategories] = useState([]);
 
+  // Helper function to generate SEO-friendly product URL
+  const generateProductUrl = (product) => {
+    const slug = product.product_name?.toLowerCase()
+      .replace(/[^\w\s-]/g, '') // Remove special characters
+      .replace(/\s+/g, '-')     // Replace spaces with hyphens
+      .replace(/-+/g, '-')      // Replace multiple hyphens with single hyphen
+      .trim();
+    return `/product/${product.id}/${slug}`;
+  };
+
   useEffect(() => {
     // Load categories
     fetch('/api/categories')
@@ -215,7 +225,7 @@ const ProductGrid = ({ initialSearchQuery = '', initialCategoryId = '' }) => {
             {products.map((product) => (
               <div key={product.id} className="bg-white rounded-xl border border-gray-100 hover:border-gray-200 hover:shadow-lg hover:shadow-gray-100/50 transition-all duration-300 ease-out group hover:-translate-y-1">
                 <a
-                  href={`/product/${product.id}`}
+                  href={generateProductUrl(product)}
                   className="block"
                   onClick={() => {
                     if (window.trackProductView) {
@@ -311,7 +321,7 @@ const ProductGrid = ({ initialSearchQuery = '', initialCategoryId = '' }) => {
                             if (window.trackProductView) {
                               window.trackProductView(product.id, product.name);
                             }
-                            window.location.href = `/product/${product.id}`;
+                            window.location.href = generateProductUrl(product);
                           }}
                           className="w-9 h-9 lg:w-7 lg:h-7 bg-white/95 backdrop-blur-md rounded-xl lg:rounded-lg flex items-center justify-center hover:bg-white hover:scale-105 transition-all duration-200 shadow-lg hover:shadow-xl ring-1 ring-black/5"
                           title="View product"
@@ -385,7 +395,7 @@ const ProductGrid = ({ initialSearchQuery = '', initialCategoryId = '' }) => {
                             if (window.trackProductView) {
                               window.trackProductView(product.id, product.name);
                             }
-                            window.location.href = `/product/${product.id}`;
+                            window.location.href = generateProductUrl(product);
                           }}
                           className="w-9 h-9 lg:w-7 lg:h-7 bg-gradient-to-r from-blue-50 to-indigo-50 text-blue-600 rounded-xl lg:rounded-lg hidden sm:flex items-center justify-center hover:from-blue-100 hover:to-indigo-100 hover:scale-105 transition-all duration-200 group/btn shadow-sm hover:shadow-md ring-1 ring-blue-100"
                           title="View product"
@@ -403,7 +413,7 @@ const ProductGrid = ({ initialSearchQuery = '', initialCategoryId = '' }) => {
                             if (window.trackProductView) {
                               window.trackProductView(product.id, product.name);
                             }
-                            window.location.href = `/product/${product.id}`;
+                            window.location.href = generateProductUrl(product);
                           }}
                           className="w-9 h-9 lg:w-7 lg:h-7 bg-gray-50 text-gray-400 rounded-xl lg:rounded-lg flex items-center justify-center hover:bg-gray-100 hover:scale-105 transition-all duration-200 group/btn shadow-sm hover:shadow-md ring-1 ring-gray-100"
                           title="View product"

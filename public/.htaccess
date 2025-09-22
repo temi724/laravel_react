@@ -5,6 +5,19 @@
 
     RewriteEngine On
 
+    # Security Headers - Hide server information
+    <IfModule mod_headers.c>
+        # Hide X-Powered-By header
+        Header unset X-Powered-By
+        Header always unset X-Powered-By
+        
+        # Additional security headers
+        Header always set X-Content-Type-Options "nosniff"
+        Header always set X-Frame-Options "SAMEORIGIN"
+        Header always set Referrer-Policy "strict-origin-when-cross-origin"
+        Header always set X-XSS-Protection "1; mode=block"
+    </IfModule>
+
     # Handle Authorization Header
     RewriteCond %{HTTP:Authorization} .
     RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]

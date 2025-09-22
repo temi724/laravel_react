@@ -1,6 +1,7 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Str;
 use App\Models\Product;
 use Illuminate\Support\Facades\Log;
 
@@ -22,7 +23,7 @@ Route::get('/', function () {
     return view('welcome');
 });
 
-Route::get('/product/{id}', function ($id) {
+Route::get('/product/{id}/{slug?}', function ($id, $slug = null) {
     // Cache product data for 30 minutes with eager loading
     $cacheKey = "product.show.{$id}";
 
@@ -43,6 +44,19 @@ Route::get('/product/{id}', function ($id) {
     // If neither found, return 404
     if (!$productData['product']) {
         abort(404);
+    }
+
+    $product = $productData['product'];
+
+    // Generate the correct slug
+    $correctSlug = Str::slug($product->product_name);
+
+    // If slug is missing or incorrect, redirect to the correct URL
+    if (!$slug || $slug !== $correctSlug) {
+        return redirect()->route('product.show', [
+            'id' => $id,
+            'slug' => $correctSlug
+        ], 301);
     }
 
     return view('react.product-show', $productData);
