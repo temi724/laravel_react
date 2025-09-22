@@ -278,7 +278,7 @@ const CartPage = () => {
                   className="block w-full bg-blue-600 text-white text-center py-2.5 px-4 rounded-md font-semibold hover:bg-blue-700 transform hover:scale-105 transition-all duration-200 shadow-md hover:shadow-lg text-sm"
                   onClick={() => {
                     if (window.trackCheckoutEvent) {
-                      window.trackCheckoutEvent('checkout_initiated', {
+                      window.trackCheckoutEvent('checkout_start', {
                         cart_total: cartTotal,
                         cart_items: cartItems.length,
                         cart_value: cartItems.reduce((total, item) => total + (item.subtotal || item.price * item.quantity), 0)

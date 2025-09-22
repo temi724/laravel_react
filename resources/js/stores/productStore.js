@@ -89,6 +89,12 @@ const useProductStore = create((set, get) => ({
         endpoint = '/api/products/search';
       }
 
+      console.log('ProductStore Debug:', {
+        searchQuery: state.searchQuery,
+        endpoint: endpoint,
+        params: params
+      });
+
       const response = await axios.get(endpoint, { params });
 
       console.log('API Response:', response.data);
@@ -159,9 +165,14 @@ const useProductStore = create((set, get) => ({
 
   // Initialize store
   initialize: (initialData = {}) => {
+    console.log('🔍 ProductStore initialize called with:', initialData);
     set({
       searchQuery: initialData.searchQuery || '',
       selectedCategory: initialData.categoryId || '',
+    });
+    console.log('🔍 ProductStore state after initialize:', {
+      searchQuery: initialData.searchQuery || '',
+      selectedCategory: initialData.categoryId || ''
     });
     get().loadProducts();
   },

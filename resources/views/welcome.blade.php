@@ -1,73 +1,269 @@
 <x-layout>
     <x-slot name="title">Murphylog global</x-slot>
 
-<section class="relative bg-cover bg-center" style="background-image: url('{{ asset('images/store.jpg') }}');">
-    <!-- Overlay for readability -->
-    <div class="absolute inset-0 bg-gradient-to-r from-blue-900/80 via-purple-900/80 to-blue-900/80"></div>
-
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 lg:py-24 relative z-10 text-white">
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
-            <div>
-                <h1 class="text-4xl lg:text-6xl font-bold mb-6">
-                    Need a Gadget?<br>
-                    <span class="bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
-                        Check Out Our List!
-                    </span>
-                </h1>
-                <p class="text-xl text-blue-100 mb-8 max-w-md">
-                    Discover our collection of affordable gadgets, smartphones, laptops, and cutting-edge tech. Quality meets affordability!
-                </p>
-                <div class="flex flex-col sm:flex-row gap-4">
-                    <a href="#products" class="bg-white text-blue-900 px-8 py-3 rounded-lg font-semibold hover:bg-blue-50 transition text-center">
-                        Shop Now
-                    </a>
-                    <a href="#deals" class="border-2 border-white text-white px-8 py-3 rounded-lg font-semibold hover:bg-white hover:text-blue-900 transition text-center">
-                        View Deals
-                    </a>
-                </div>
-            </div>
-            <div class="relative">
-                <div class="bg-white/20 backdrop-blur-sm rounded-2xl p-8 border border-white/20">
-                    <div class="space-y-6">
-                        <div class="flex items-center space-x-4">
-                            <div class="w-12 h-12 bg-blue-400 rounded-lg flex items-center justify-center">
-                                <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"></path>
-                                </svg>
-                            </div>
-                            <div>
-                                <div class="font-semibold">Latest Smartphones</div>
-                                <div class="text-blue-200 text-sm">From ₦100,000</div>
-                            </div>
+<!-- Hero Carousel Section -->
+<section class="relative overflow-hidden">
+    <div class="hero-carousel relative h-[70vh] min-h-[500px]">
+        <!-- Slide 1 -->
+        <div class="slide active" style="background-image: url('{{ asset('images/store.jpg') }}');">
+            <div class="absolute inset-0 bg-gradient-to-r from-blue-900/80 via-purple-900/80 to-blue-900/80"></div>
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-full flex items-center relative z-10 text-white">
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center w-full">
+                    <div>
+                        <h1 class="text-4xl lg:text-6xl font-bold mb-6">
+                            Need a Gadget?<br>
+                            <span class="bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
+                                Check Out Our List!
+                            </span>
+                        </h1>
+                        <p class="text-xl text-blue-100 mb-8 max-w-md">
+                            Discover our collection of affordable gadgets, smartphones, laptops, and cutting-edge tech. Quality meets affordability!
+                        </p>
+                        <div class="flex flex-col sm:flex-row gap-4">
+                            <a href="#products" class="bg-white text-blue-900 px-8 py-3 rounded-lg font-semibold hover:bg-blue-50 transition text-center">
+                                Shop Now
+                            </a>
+                            <a href="#deals" class="border-2 border-white text-white px-8 py-3 rounded-lg font-semibold hover:bg-white hover:text-blue-900 transition text-center">
+                                View Deals
+                            </a>
                         </div>
-                        <div class="flex items-center space-x-4">
-                            <div class="w-12 h-12 bg-purple-400 rounded-lg flex items-center justify-center">
-                                <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
-                                </svg>
-                            </div>
-                            <div>
-                                <div class="font-semibold">Gaming Laptops</div>
-                                <div class="text-blue-200 text-sm">Up to 50% Off</div>
-                            </div>
-                        </div>
-                        <div class="flex items-center space-x-4">
-                            <div class="w-12 h-12 bg-green-400 rounded-lg flex items-center justify-center">
-                                <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536M9 11V9a3 3 0 116 0v2m-3 9a7 7 0 100-14 7 7 0 000 14z"></path>
-                                </svg>
-                            </div>
-                            <div>
-                                <div class="font-semibold">Smart Home</div>
-                                <div class="text-blue-200 text-sm">Free Installation</div>
+                    </div>
+                    <div class="relative">
+                        <div class="bg-white/20 backdrop-blur-sm rounded-2xl p-8 border border-white/20">
+                            <div class="space-y-6">
+                                <div class="flex items-center space-x-4">
+                                    <div class="w-12 h-12 bg-blue-400 rounded-lg flex items-center justify-center">
+                                        <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"></path>
+                                        </svg>
+                                    </div>
+                                    <div>
+                                        <div class="font-semibold">Latest Smartphones</div>
+                                        <div class="text-blue-200 text-sm">From ₦100,000</div>
+                                    </div>
+                                </div>
+                                <div class="flex items-center space-x-4">
+                                    <div class="w-12 h-12 bg-purple-400 rounded-lg flex items-center justify-center">
+                                        <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
+                                        </svg>
+                                    </div>
+                                    <div>
+                                        <div class="font-semibold">Gaming Laptops</div>
+                                        <div class="text-blue-200 text-sm">Up to 50% Off</div>
+                                    </div>
+                                </div>
+                                <div class="flex items-center space-x-4">
+                                    <div class="w-12 h-12 bg-green-400 rounded-lg flex items-center justify-center">
+                                        <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536M9 11V9a3 3 0 116 0v2m-3 9a7 7 0 100-14 7 7 0 000 14z"></path>
+                                        </svg>
+                                    </div>
+                                    <div>
+                                        <div class="font-semibold">Smart Home</div>
+                                        <div class="text-blue-200 text-sm">Free Installation</div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
+
+        <!-- Slide 2 -->
+        <div class="slide" style="background-image: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+            <div class="absolute inset-0 bg-black/30"></div>
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-full flex items-center relative z-10 text-white">
+                <div class="text-center w-full">
+                    <h1 class="text-5xl lg:text-7xl font-bold mb-6">
+                        <span class="bg-gradient-to-r from-yellow-400 to-orange-500 bg-clip-text text-transparent">
+                            Flash Deals
+                        </span>
+                    </h1>
+                    <p class="text-xl text-gray-200 mb-8 max-w-2xl mx-auto">
+                        Limited time offers on premium gadgets. Save big on the latest technology!
+                    </p>
+                    <div class="flex flex-col sm:flex-row gap-4 justify-center">
+                        <a href="#deals" class="bg-orange-500 text-white px-8 py-3 rounded-lg font-semibold hover:bg-orange-600 transition text-center">
+                            View Flash Deals
+                        </a>
+                        <a href="#products" class="border-2 border-white text-white px-8 py-3 rounded-lg font-semibold hover:bg-white hover:text-orange-500 transition text-center">
+                            Browse Products
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 3 -->
+        <div class="slide" style="background-image: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);">
+            <div class="absolute inset-0 bg-black/30"></div>
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-full flex items-center relative z-10 text-white">
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center w-full">
+                    <div>
+                        <h1 class="text-4xl lg:text-6xl font-bold mb-6">
+                            Premium<br>
+                            <span class="bg-gradient-to-r from-pink-400 to-red-400 bg-clip-text text-transparent">
+                                Accessories
+                            </span>
+                        </h1>
+                        <p class="text-xl text-gray-200 mb-8 max-w-md">
+                            Complete your tech setup with our premium accessories collection.
+                        </p>
+                        <a href="#products" class="bg-white text-pink-600 px-8 py-3 rounded-lg font-semibold hover:bg-gray-50 transition text-center inline-block">
+                            Explore Accessories
+                        </a>
+                    </div>
+                    <div class="text-center">
+                        <div class="bg-white/20 backdrop-blur-sm rounded-2xl p-8 border border-white/20 inline-block">
+                            <svg class="w-24 h-24 text-white mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 100 4m0-4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 100 4m0-4v2m0-6V4"></path>
+                            </svg>
+                            <h3 class="text-2xl font-bold mb-2">Premium Quality</h3>
+                            <p class="text-gray-300">Trusted by thousands</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Navigation Arrows -->
+    <button class="carousel-prev absolute left-4 top-1/2 transform -translate-y-1/2 z-20 bg-white/20 backdrop-blur-sm text-white p-3 rounded-full hover:bg-white/30 transition">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+        </svg>
+    </button>
+    <button class="carousel-next absolute right-4 top-1/2 transform -translate-y-1/2 z-20 bg-white/20 backdrop-blur-sm text-white p-3 rounded-full hover:bg-white/30 transition">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+        </svg>
+    </button>
+
+    <!-- Indicators -->
+    <div class="carousel-indicators absolute bottom-8 left-1/2 transform -translate-x-1/2 z-20 flex space-x-3">
+        <button class="indicator active w-3 h-3 bg-white rounded-full opacity-50 hover:opacity-100 transition"></button>
+        <button class="indicator w-3 h-3 bg-white rounded-full opacity-50 hover:opacity-100 transition"></button>
+        <button class="indicator w-3 h-3 bg-white rounded-full opacity-50 hover:opacity-100 transition"></button>
     </div>
 </section>
+
+<style>
+.hero-carousel {
+    position: relative;
+}
+
+.hero-carousel .slide {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-size: cover;
+    background-position: center;
+    opacity: 0;
+    transition: opacity 0.5s ease-in-out;
+    display: flex;
+    align-items: center;
+}
+
+.hero-carousel .slide.active {
+    opacity: 1;
+}
+
+.hero-carousel .slide::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.3);
+}
+
+.carousel-prev, .carousel-next {
+    display: none;
+}
+
+@media (min-width: 768px) {
+    .carousel-prev, .carousel-next {
+        display: block;
+    }
+}
+
+.carousel-indicators .indicator.active {
+    opacity: 1 !important;
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const carousel = document.querySelector('.hero-carousel');
+    const slides = document.querySelectorAll('.slide');
+    const indicators = document.querySelectorAll('.indicator');
+    const prevBtn = document.querySelector('.carousel-prev');
+    const nextBtn = document.querySelector('.carousel-next');
+
+    let currentSlide = 0;
+    let slideInterval;
+
+    function showSlide(index) {
+        slides.forEach(slide => slide.classList.remove('active'));
+        indicators.forEach(indicator => indicator.classList.remove('active'));
+
+        slides[index].classList.add('active');
+        indicators[index].classList.add('active');
+        currentSlide = index;
+    }
+
+    function nextSlide() {
+        const nextIndex = (currentSlide + 1) % slides.length;
+        showSlide(nextIndex);
+    }
+
+    function prevSlide() {
+        const prevIndex = (currentSlide - 1 + slides.length) % slides.length;
+        showSlide(prevIndex);
+    }
+
+    function startAutoSlide() {
+        slideInterval = setInterval(nextSlide, 5000); // Change slide every 5 seconds
+    }
+
+    function stopAutoSlide() {
+        clearInterval(slideInterval);
+    }
+
+    // Event listeners
+    nextBtn.addEventListener('click', () => {
+        nextSlide();
+        stopAutoSlide();
+        startAutoSlide();
+    });
+
+    prevBtn.addEventListener('click', () => {
+        prevSlide();
+        stopAutoSlide();
+        startAutoSlide();
+    });
+
+    indicators.forEach((indicator, index) => {
+        indicator.addEventListener('click', () => {
+            showSlide(index);
+            stopAutoSlide();
+            startAutoSlide();
+        });
+    });
+
+    // Pause on hover
+    carousel.addEventListener('mouseenter', stopAutoSlide);
+    carousel.addEventListener('mouseleave', startAutoSlide);
+
+    // Start auto-sliding
+    startAutoSlide();
+});
+</script>
 
     <!-- Flash Deals -->
     <section class="py-16" id="deals">
@@ -95,6 +291,7 @@
                                     src="{{ $deal->images_url[0] }}"
                                     alt="{{ $deal->product_name }}"
                                     class="w-full aspect-video object-cover"
+                                    loading="lazy"
                                     onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';"
                                 >
                                 <div class="absolute inset-0 flex items-center justify-center" style="display: none;">

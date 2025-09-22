@@ -1,86 +1,129 @@
+console.log('🚨 REACT.JSX FILE IS LOADING!');
+
 import React from 'react';
-import { createRoot } from 'react-dom/client';
+import ReactDOM from 'react-dom/client';
 
-// Import customer-facing components (loaded immediately as they're used more frequently)
-import Cart from './components/Cart.jsx';
-import CartPage from './components/CartPage.jsx';
-import ProductGrid from './components/ProductGrid.jsx';
-import SearchBar from './components/SearchBar.jsx';
-import CheckoutPage from './components/CheckoutPage.jsx';
-import CartCounter from './components/CartCounter.jsx';
-import ProductShow from './components/ProductShow.jsx';
+console.log('✅ React and ReactDOM imported successfully');
 
-// Import lazy admin components (loaded only when needed)
-import {
-  LazyAdminLogin,
-  LazyAdminDashboard,
-  LazyAdminProductManager,
-  LazyAdminSalesManager,
-  LazyAdminOrderManager,
-  LazyOfflineSales,
-} from './components/admin/LazyAdminComponents.jsx';
-
-// Import stores
+// Import stores first (most likely to work)
 import useCartStore from './stores/cartStore.js';
+console.log('✅ useCartStore imported');
+
+// Try importing one component to test
+import ProductGrid from './components/ProductGrid.jsx';
+console.log('✅ ProductGrid imported');
+
+// Import other essential components
+import SearchBar from './components/SearchBar.jsx';
+console.log('✅ SearchBar imported');
+
+import ProductShow from './components/ProductShow.jsx';
+console.log('✅ ProductShow imported');
+
+// Import cart components
+import CartPage from './components/CartPage.jsx';
+console.log('✅ CartPage imported');
+
+import CartCounter from './components/CartCounter.jsx';
+console.log('✅ CartCounter imported');
+
+import Cart from './components/Cart.jsx';
+console.log('✅ Cart imported');
+
+// Import checkout component
+import CheckoutPage from './components/CheckoutPage.jsx';
+console.log('✅ CheckoutPage imported');
+
+// Import lazy-loaded admin components
+import {
+    LazyAdminDashboard,
+    LazyAdminLogin,
+    LazyAdminProductManager,
+    LazyAdminSalesManager,
+    LazyAdminOrderManager
+} from './components/admin/LazyAdminComponents.jsx';
+console.log('✅ Lazy admin components imported');
+
+console.log('React.jsx: Starting React initialization');
 
 // Component registry
 const components = {
-  Cart,
-  CartPage,
   ProductGrid,
   SearchBar,
-  CheckoutPage,
-  CartCounter,
   ProductShow,
-  // Admin components (lazy loaded)
-  AdminLogin: LazyAdminLogin,
+  CartPage,
+  CartCounter,
+  Cart,
+  CheckoutPage,
   AdminDashboard: LazyAdminDashboard,
+  AdminLogin: LazyAdminLogin,
   AdminProductManager: LazyAdminProductManager,
   AdminSalesManager: LazyAdminSalesManager,
   AdminOrderManager: LazyAdminOrderManager,
-  OfflineSales: LazyOfflineSales,
 };
+
+console.log('✅ Component registry created:', Object.keys(components));
 
 // Function to initialize React components
 function initializeReactComponents() {
+  console.log('🚀 initializeReactComponents function called!');
+
   // Make cart store available globally for Alpine.js integration
   window.useCartStore = useCartStore;
+  console.log('✅ Cart store made available globally');
 
-  // Find all elements with data-react-component attribute
+  // Find all elements that need React components
   const reactElements = document.querySelectorAll('[data-react-component]');
+  console.log(`🔍 Found ${reactElements.length} React component elements:`, reactElements);
 
   reactElements.forEach(element => {
     const componentName = element.getAttribute('data-react-component');
-    const Component = components[componentName];
+    console.log(`[React Init] Found component: ${componentName}`, element);
 
-    if (Component) {
-      // Parse props from data attributes
+    console.log(`🔍 Checking if component "${componentName}" exists in registry...`);
+    console.log('Available components:', Object.keys(components));
+
+    if (components[componentName]) {
+      console.log(`✅ Component ${componentName} found in registry`);
+
+      // Extract props from data-prop-* attributes
       const props = {};
-      Array.from(element.attributes).forEach(attr => {
+      for (let attr of element.attributes) {
         if (attr.name.startsWith('data-prop-')) {
-          const propName = attr.name.replace('data-prop-', '');
-          try {
-            // Try to parse as JSON first, fall back to string
-            props[propName] = JSON.parse(attr.value);
-          } catch {
-            props[propName] = attr.value;
-          }
+          const propName = attr.name.substring(10); // Remove 'data-prop-'
+          props[propName] = attr.value;
+          console.log(`[React Init] Extracted prop: ${propName} = "${attr.value}"`);
         }
-      });
+      }
 
-      // Create React root and render component
-      const root = createRoot(element);
-      root.render(<Component {...props} />);
+      console.log(`[React Init] Final props for ${componentName}:`, props);
+
+      try {
+        console.log(`🚀 Attempting to render ${componentName}...`);
+        const root = ReactDOM.createRoot(element);
+        root.render(React.createElement(components[componentName], props));
+        console.log(`✅ Successfully rendered ${componentName}`);
+      } catch (error) {
+        console.error(`❌ Error rendering ${componentName}:`, error);
+      }
     } else {
-      console.warn(`React component "${componentName}" not found`);
+      console.warn(`❌ Component ${componentName} not found in registry. Available components:`, Object.keys(components));
     }
   });
 }
 
 // Initialize when DOM is ready
+console.log('🚀 Setting up React initialization!');
+console.log('🔍 Document ready state:', document.readyState);
+
 if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', initializeReactComponents);
+  console.log('📅 Document still loading, adding DOMContentLoaded listener');
+  document.addEventListener('DOMContentLoaded', () => {
+    console.log('📅 DOMContentLoaded event fired, initializing React components');
+    initializeReactComponents();
+  });
 } else {
+  console.log('📅 Document already loaded, initializing React components immediately');
   initializeReactComponents();
 }
 
@@ -89,28 +132,22 @@ window.initializeReactComponents = initializeReactComponents;
 
 // Add specific initializer for ProductShow
 window.initProductShow = (props) => {
+  console.log('🚀 initProductShow called with props:', props);
   const container = document.getElementById('product-show-root');
   if (container && components.ProductShow) {
-    const root = createRoot(container);
-    root.render(<components.ProductShow {...props} />);
-    console.log('ProductShow component rendered with props:', props);
+    const root = ReactDOM.createRoot(container);
+    root.render(React.createElement(components.ProductShow, props));
+    console.log('✅ ProductShow component rendered with props:', props);
   } else {
-    console.error('ProductShow container or component not found');
+    console.error('❌ ProductShow container or component not found', { container, ProductShow: components.ProductShow });
   }
 };
 
+console.log('🎉 React.jsx setup complete!');
+
 // Export components for direct use
 export {
-  Cart,
-  CartPage,
   ProductGrid,
   SearchBar,
-  CheckoutPage,
   ProductShow,
-  // Admin components (lazy loaded)
-  LazyAdminLogin as AdminLogin,
-  LazyAdminDashboard as AdminDashboard,
-  LazyAdminProductManager as AdminProductManager,
-  LazyAdminSalesManager as AdminSalesManager,
-  LazyAdminOrderManager as AdminOrderManager,
 };

@@ -198,6 +198,18 @@ const useCheckoutStore = create((set, get) => ({
       const result = await get().placeOrder();
 
       if (result.success) {
+        // Track purchase event
+        if (window.trackCheckoutEvent) {
+          window.trackCheckoutEvent('purchase', {
+            order_id: result.orderId,
+            total: get().cartTotal,
+            items: get().cartItems.length,
+            payment_method: get().paymentMethod,
+            delivery_option: get().deliveryOption,
+            currency: 'NGN'
+          });
+        }
+
         // Clear cart only after successful order placement
         const cartStore = useCartStore.getState();
         cartStore.clearCart();

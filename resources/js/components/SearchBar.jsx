@@ -1,108 +1,68 @@
-import React, { useState, useRef, useEffect } from 'react';
-import useProductStore from '../stores/productStore';
+import React, { useState, useEffect } from 'react';
 
-const SearchBar = ({ onSearch, placeholder = "Search for products..." }) => {
-  const {
-    searchResults,
-    showSearchDropdown,
-    setSearchQuery,
-    hideSearchDropdown,
-  } = useProductStore();
-
+const SearchBar = ({ placeholder = "Search for products..." }) => {
   const [query, setQuery] = useState('');
-  const [isInputFocused, setIsInputFocused] = useState(false);
-  const searchRef = useRef(null);
-  const timeoutRef = useRef(null);
+  const [suggestions, setSuggestions] = useState([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
-  // Helper function to generate SEO-friendly product URL
-  const generateProductUrl = (product) => {
-    const slug = product.product_name?.toLowerCase()
-      .replace(/[^\w\s-]/g, '') // Remove special characters
-      .replace(/\s+/g, '-')     // Replace spaces with hyphens
-      .replace(/-+/g, '-')      // Replace multiple hyphens with single hyphen
-      .trim();
-    return `/product/${product.id}/${slug}`;
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    if (query.trim()) {
+      // Always navigate to search results page
+      window.location.href = `/search?q=${encodeURIComponent(query.trim())}`;
+      setShowSuggestions(false);
+    }
   };
-
-  // Handle clicks outside to close dropdown
-  useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (searchRef.current && !searchRef.current.contains(event.target)) {
-        hideSearchDropdown();
-        setIsInputFocused(false);
-      }
-    };
-
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, [hideSearchDropdown]);
 
   const handleInputChange = (e) => {
     const value = e.target.value;
     setQuery(value);
 
-    // Clear existing timeout
-    if (timeoutRef.current) {
-      clearTimeout(timeoutRef.current);
+    if (value.length >= 2) {
+      fetchSuggestions(value);
+    } else {
+      setSuggestions([]);
+      setShowSuggestions(false);
     }
+  };
 
-    // Debounce the search
-    timeoutRef.current = setTimeout(() => {
-      setSearchQuery(value);
-    }, 300);
+  const fetchSuggestions = async (searchQuery) => {
+    setIsLoading(true);
+    try {
+      const response = await fetch(`/api/products/suggestions?q=${encodeURIComponent(searchQuery)}`);
+      const data = await response.json();
+      setSuggestions(data);
+      setShowSuggestions(data.length > 0);
+    } catch (error) {
+      console.error('Error fetching suggestions:', error);
+      setSuggestions([]);
+      setShowSuggestions(false);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleSuggestionClick = (suggestion) => {
+    setQuery(suggestion.name);
+    setShowSuggestions(false);
+    // Navigate to product page
+    window.location.href = `/product/${suggestion.id}/${suggestion.name.toLowerCase().replace(/[^\w\s-]/g, '').replace(/\s+/g, '-').replace(/-+/g, '-')}`;
   };
 
   const handleInputFocus = () => {
-    setIsInputFocused(true);
-    if (query.length >= 2) {
-      setSearchQuery(query);
+    if (suggestions.length > 0) {
+      setShowSuggestions(true);
     }
   };
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    if (query.trim()) {
-      setSearchQuery(query);
-      hideSearchDropdown();
-      setIsInputFocused(false);
-
-      // Navigate to search results if onSearch callback is provided
-      if (onSearch) {
-        onSearch(query);
-      } else {
-        // Default navigation to search page
-        window.location.href = `/search?q=${encodeURIComponent(query)}`;
-      }
-    }
-  };
-
-  const handleResultClick = (product) => {
-    hideSearchDropdown();
-    setIsInputFocused(false);
-    window.location.href = generateProductUrl(product);
-  };
-
-  const highlightMatch = (text, query) => {
-    if (!query) return text;
-
-    const regex = new RegExp(`(${query})`, 'gi');
-    const parts = text.split(regex);
-
-    return parts.map((part, index) =>
-      regex.test(part) ? (
-        <span key={index} className="bg-yellow-200 font-semibold">
-          {part}
-        </span>
-      ) : (
-        part
-      )
-    );
+  const handleInputBlur = () => {
+    // Delay hiding suggestions to allow clicks
+    setTimeout(() => setShowSuggestions(false), 150);
   };
 
   return (
-    <div ref={searchRef} className="relative w-full max-w-2xl">
+    <div className="relative w-full max-w-2xl">
       <form onSubmit={handleSubmit} className="relative">
         <div className="relative">
           <input
@@ -110,6 +70,7 @@ const SearchBar = ({ onSearch, placeholder = "Search for products..." }) => {
             value={query}
             onChange={handleInputChange}
             onFocus={handleInputFocus}
+            onBlur={handleInputBlur}
             placeholder={placeholder}
             className="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white text-gray-900 placeholder-gray-500"
           />
@@ -132,11 +93,7 @@ const SearchBar = ({ onSearch, placeholder = "Search for products..." }) => {
           {query && (
             <button
               type="button"
-              onClick={() => {
-                setQuery('');
-                setSearchQuery('');
-                hideSearchDropdown();
-              }}
+              onClick={() => setQuery('')}
               className="absolute inset-y-0 right-0 pr-3 flex items-center"
             >
               <svg
@@ -155,88 +112,59 @@ const SearchBar = ({ onSearch, placeholder = "Search for products..." }) => {
             </button>
           )}
         </div>
-      </form>
 
-      {/* Search Dropdown */}
-      {showSearchDropdown && isInputFocused && searchResults.length > 0 && (
-        <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-gray-200 rounded-lg shadow-lg z-50 max-h-96 overflow-y-auto">
-          <div className="py-2">
-            {searchResults.map((product) => (
-              <button
-                key={product.id}
-                onClick={() => handleResultClick(product)}
-                className="w-full px-4 py-3 text-left hover:bg-gray-50 flex items-center space-x-3 transition-colors"
+        {/* Search Suggestions Dropdown */}
+        {showSuggestions && suggestions.length > 0 && (
+          <div className="absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-80 overflow-y-auto">
+            {suggestions.map((suggestion, index) => (
+              <div
+                key={`${suggestion.type}-${suggestion.id}`}
+                onClick={() => handleSuggestionClick(suggestion)}
+                className="px-4 py-3 hover:bg-gray-50 cursor-pointer border-b border-gray-100 last:border-b-0"
               >
-                {/* Product Image */}
-                <div className="w-12 h-12 bg-gray-100 rounded-lg flex-shrink-0 overflow-hidden">
-                  {product.images_url && product.images_url.length > 0 ? (
-                    <img
-                      src={product.images_url[0]}
-                      alt={product.product_name}
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center text-gray-400">
-                      <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                      </svg>
+                <div className="flex items-center justify-between">
+                  <div className="flex-1">
+                    <div className="font-medium text-gray-900 truncate">
+                      {suggestion.name}
                     </div>
-                  )}
+                    <div className="text-sm text-gray-500">
+                      {suggestion.type === 'deal' ? 'Deal' : 'Product'} • ₦{parseFloat(suggestion.price).toLocaleString()}
+                    </div>
+                  </div>
+                  <div className="ml-3">
+                    <svg
+                      className="h-4 w-4 text-gray-400"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M9 5l7 7-7 7"
+                      />
+                    </svg>
+                  </div>
                 </div>
-
-                {/* Product Info */}
-                <div className="flex-1 min-w-0">
-                  <h4 className="text-sm font-medium text-gray-900 truncate">
-                    {highlightMatch(product.product_name, query)}
-                  </h4>
-                  <p className="text-sm text-blue-600 font-semibold">
-                    ₦{product.price.toLocaleString()}
-                  </p>
-                  {!product.in_stock && (
-                    <span className="text-xs text-red-500">Out of stock</span>
-                  )}
-                </div>
-
-                {/* Arrow Icon */}
-                <div className="text-gray-400">
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                  </svg>
-                </div>
-              </button>
+              </div>
             ))}
           </div>
+        )}
 
-          {/* View All Results */}
-          <div className="border-t border-gray-200 px-4 py-3">
-            <button
-              onClick={() => {
-                handleSubmit({ preventDefault: () => {} });
-              }}
-              className="w-full text-left text-sm text-blue-600 hover:text-blue-700 font-medium"
-            >
-              View all results for "{query}" →
-            </button>
+        {/* Loading indicator for suggestions */}
+        {isLoading && query.length >= 2 && (
+          <div className="absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg p-4">
+            <div className="flex items-center">
+              <svg className="animate-spin h-4 w-4 text-blue-500 mr-2" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+              <span className="text-sm text-gray-500">Searching...</span>
+            </div>
           </div>
-        </div>
-      )}
-
-      {/* No Results */}
-      {showSearchDropdown && isInputFocused && query.length >= 2 && searchResults.length === 0 && (
-        <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-gray-200 rounded-lg shadow-lg z-50">
-          <div className="px-4 py-6 text-center">
-            <svg className="mx-auto h-12 w-12 text-gray-300 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-            </svg>
-            <p className="text-gray-500 text-sm">
-              No products found for "{query}"
-            </p>
-            <p className="text-gray-400 text-xs mt-1">
-              Try a different search term
-            </p>
-          </div>
-        </div>
-      )}
+        )}
+      </form>
     </div>
   );
 };

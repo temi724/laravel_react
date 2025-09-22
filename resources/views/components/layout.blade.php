@@ -5,8 +5,17 @@
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <meta name="csrf-token" content="{{ csrf_token() }}">
         <meta name="description" content="Shop affordable, reliable laptops, phones & gadgets. UK used & brand-new devices at unbeatable prices. Trusted tech store near you – Buy smart, spend less!">
+        <meta name="keywords" content="laptops, uk used, brand new, cheap, smartphones, gadgets, electronics, cheap laptops, affordable phones, tech store, computer accessories">
+        <meta name="author" content="Murphylog Global">
+        <meta name="robots" content="index, follow">
+
+
 
         <title>{{ $title ?? 'Murphylog global' }}</title>
+
+        <!-- Favicon -->
+        <link rel="icon" type="image/x-icon" href="{{ asset('favicon.ico') }}">
+        <link rel="apple-touch-icon" href="{{ asset('images/murphylogo.png') }}">
 
         <!-- Fonts -->
         <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -20,6 +29,7 @@
         <!-- Analytics Tracking Script -->
         <script src="/js/analytics-tracker.js"></script>
     </head>
+
     <body class="bg-gray-50 font-sans antialiased">
         <!-- Header -->
         <header class="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-50">
@@ -156,12 +166,6 @@
 
                             <!-- Quick Category Links - Hidden on mobile -->
                             <div class="hidden sm:flex space-x-4">
-                                {{-- <a href="#" onclick="filterByCategory('')" class="text-gray-700 hover:text-blue-600 transition">All</a>
-                                <a href="#" onclick="filterByCategoryName('Smartphones')" class="text-gray-700 hover:text-blue-600 transition">Smartphones</a>
-                                <a href="#" onclick="filterByCategoryName('Laptops')" class="text-gray-700 hover:text-blue-600 transition">Laptops</a>
-                                <a href="#" onclick="filterByCategoryName('Gaming Consoles')" class="text-gray-700 hover:text-blue-600 transition">Gaming</a>
-                                <a href="#" onclick="filterByCategoryName('Speakers')" class="text-gray-700 hover:text-blue-600 transition">Audio</a>
-                                <a href="#" onclick="filterByCategoryName('Smart Home')" class="text-gray-700 hover:text-blue-600 transition">Smart Home</a> --}}
                                 <a href="#deals" class="text-red-600 font-medium">Deals</a>
                             </div>
                         </div>

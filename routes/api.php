@@ -16,6 +16,7 @@ Route::get('/user', function (Request $request) {
 // Product API routes - Public routes
 Route::get('products', [ProductController::class, 'index']);
 Route::get('products/search', [ProductController::class, 'search']);
+Route::get('products/suggestions', [ProductController::class, 'suggestions']);
 Route::get('products/category/{categoryId}', [ProductController::class, 'productsByCategory']);
 Route::get('products/{id}', [ProductController::class, 'show']);
 

@@ -461,6 +461,8 @@ class ProductController extends Controller
      */
     public function search(Request $request)
     {
+        Log::info('Search endpoint called', ['query' => $request->get('q'), 'all_params' => $request->all()]);
+
         $request->validate([
             'q' => 'required|string|min:1',
             'category_id' => 'nullable|string|exists:categories,id',
@@ -473,7 +475,22 @@ class ProductController extends Controller
 
         $searchTerm = $request->get('q');
 
-        // Search products
+        // If search term is very short or contains no letters, return empty results
+        if (strlen(trim($searchTerm)) < 2 || !preg_match('/[a-zA-Z]/', $searchTerm)) {
+            return response()->json([
+                'data' => [],
+                'current_page' => 1,
+                'last_page' => 1,
+                'per_page' => $perPage ?? 15,
+                'total' => 0,
+                'from' => 0,
+                'to' => 0,
+                'search_query' => $searchTerm,
+                'message' => 'Search term too short or invalid'
+            ]);
+        }
+
+        // Search products with improved relevance scoring
         $productQuery = Product::query();
         $productQuery->where(function ($q) use ($searchTerm) {
             $q->where('product_name', 'LIKE', "%{$searchTerm}%")
@@ -482,7 +499,7 @@ class ProductController extends Controller
               ->orWhere('about', 'LIKE', "%{$searchTerm}%");
         });
 
-        // Search deals
+        // Search deals with improved relevance scoring
         $dealQuery = \App\Models\Deal::query();
         $dealQuery->where(function ($q) use ($searchTerm) {
             $q->where('product_name', 'LIKE', "%{$searchTerm}%")
@@ -512,19 +529,43 @@ class ProductController extends Controller
             $dealQuery->where('in_stock', $request->boolean('in_stock'));
         }
 
-        // Get results and add type
-        $products = $productQuery->with('category')->get()->map(function ($product) {
+        // Get results and calculate relevance scores in PHP
+        $products = $productQuery->with('category')->get()->map(function ($product) use ($searchTerm) {
             $product->type = 'product';
+            $product->relevance_score = $this->calculateRelevanceScore($product, $searchTerm);
             return $product;
+        })->filter(function ($product) {
+            return $product->relevance_score > 0;
         });
 
-        $deals = $dealQuery->with('category')->get()->map(function ($deal) {
+        $deals = $dealQuery->with('category')->get()->map(function ($deal) use ($searchTerm) {
             $deal->type = 'deal';
+            $deal->relevance_score = $this->calculateRelevanceScore($deal, $searchTerm);
             return $deal;
+        })->filter(function ($deal) {
+            return $deal->relevance_score > 0;
         });
 
-        // Combine and sort by latest
-        $combined = $products->concat($deals)->sortByDesc('created_at');
+        // Combine and sort by relevance score (highest first), then by latest
+        $combined = $products->concat($deals)
+            ->sortByDesc(function ($item) {
+                // Primary sort: relevance_score (higher is better)
+                // Secondary sort: created_at (newer is better)
+                return $item->relevance_score * 1000000 + strtotime($item->created_at);
+            });
+
+        // Debug logging for search results
+        Log::info('Search Debug', [
+            'search_term' => $searchTerm,
+            'total_results' => $combined->count(),
+            'top_results' => $combined->take(3)->map(function($item) {
+                return [
+                    'name' => $item->product_name,
+                    'relevance_score' => $item->relevance_score,
+                    'type' => $item->type
+                ];
+            })->toArray()
+        ]);
 
         // Manual pagination
         $perPage = min($request->get('per_page', 15), 100);
@@ -639,5 +680,95 @@ class ProductController extends Controller
 
             return response()->json($response);
         });
+    }
+
+    /**
+     * Calculate relevance score for search results
+     */
+    private function calculateRelevanceScore($item, $searchTerm)
+    {
+        $searchTermLower = strtolower($searchTerm);
+        $productNameLower = strtolower($item->product_name ?? '');
+        $descriptionLower = strtolower($item->description ?? '');
+        $overviewLower = strtolower($item->overview ?? '');
+        $aboutLower = strtolower($item->about ?? '');
+
+        // Exact match in product name
+        if ($productNameLower === $searchTermLower) {
+            return 100;
+        }
+
+        // Product name starts with search term
+        if (strpos($productNameLower, $searchTermLower) === 0) {
+            return 90;
+        }
+
+        // Product name contains search term
+        if (strpos($productNameLower, $searchTermLower) !== false) {
+            return 80;
+        }
+
+        // Description contains search term
+        if (strpos($descriptionLower, $searchTermLower) !== false) {
+            return 60;
+        }
+
+        // Overview contains search term
+        if (strpos($overviewLower, $searchTermLower) !== false) {
+            return 50;
+        }
+
+        // About contains search term
+        if (strpos($aboutLower, $searchTermLower) !== false) {
+            return 40;
+        }
+
+        return 0;
+    }
+
+    /**
+     * Get search suggestions for autocomplete
+     */
+    public function suggestions(Request $request)
+    {
+        $query = $request->input('q', '');
+
+        if (strlen($query) < 2) {
+            return response()->json([]);
+        }
+
+        Log::info('Search suggestions endpoint called', [
+            'query' => $query,
+        ]);
+
+        // Get top 5 product suggestions
+        $products = Product::where('product_name', 'LIKE', '%' . $query . '%')
+            ->limit(5)
+            ->get(['id', 'product_name', 'price'])
+            ->map(function ($product) {
+                return [
+                    'id' => $product->id,
+                    'name' => $product->product_name,
+                    'price' => $product->price,
+                    'type' => 'product'
+                ];
+            });
+
+        // Get top 5 deal suggestions
+        $deals = \App\Models\Deal::where('product_name', 'LIKE', '%' . $query . '%')
+            ->limit(5)
+            ->get(['id', 'product_name', 'price'])
+            ->map(function ($deal) {
+                return [
+                    'id' => $deal->id,
+                    'name' => $deal->product_name,
+                    'price' => $deal->price,
+                    'type' => 'deal'
+                ];
+            });
+
+        $suggestions = collect($products)->merge($deals)->take(8);
+
+        return response()->json($suggestions);
     }
 }

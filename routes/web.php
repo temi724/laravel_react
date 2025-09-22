@@ -23,6 +23,9 @@ Route::get('/', function () {
     return view('welcome');
 });
 
+// Sitemap
+Route::get('/sitemap.xml', [App\Http\Controllers\SitemapController::class, 'index'])->name('sitemap');
+
 Route::get('/product/{id}/{slug?}', function ($id, $slug = null) {
     // Cache product data for 30 minutes with eager loading
     $cacheKey = "product.show.{$id}";
@@ -63,6 +66,12 @@ Route::get('/product/{id}/{slug?}', function ($id, $slug = null) {
 })->name('product.show');
 
 Route::get('/search', function () {
+    $searchQuery = request('q', '');
+    Log::info('Search route accessed', [
+        'query' => $searchQuery,
+        'all_params' => request()->all(),
+        'url' => request()->fullUrl()
+    ]);
     return view('search.results');
 })->name('search.results');
 

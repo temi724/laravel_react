@@ -3,6 +3,7 @@ import useProductStore from '../stores/productStore';
 import useCartStore from '../stores/cartStore';
 
 const ProductGrid = ({ initialSearchQuery = '', initialCategoryId = '' }) => {
+
   const {
     products,
     totalProducts,
@@ -39,6 +40,7 @@ const ProductGrid = ({ initialSearchQuery = '', initialCategoryId = '' }) => {
   };
 
   useEffect(() => {
+
     // Load categories
     fetch('/api/categories')
       .then(res => res.json())

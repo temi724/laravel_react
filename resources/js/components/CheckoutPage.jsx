@@ -88,6 +88,16 @@ const CheckoutPage = () => {
     const result = showPaymentModal();
 
     if (result.success) {
+      // Track payment info event
+      if (window.trackCheckoutEvent) {
+        window.trackCheckoutEvent('payment_info', {
+          payment_method: paymentMethod,
+          delivery_option: deliveryOption,
+          cart_total: cartTotal,
+          cart_items: cartItems.length,
+          order_id: generatedOrderId
+        });
+      }
       // Payment modal is now shown with generated order ID
       // No API call made yet - that happens when user clicks Continue
     }

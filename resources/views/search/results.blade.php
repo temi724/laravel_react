@@ -7,6 +7,10 @@
             @if(request('q'))
                 <p class="text-gray-600 mt-2">Results for "<strong>{{ request('q') }}</strong>"</p>
             @endif
+            {{-- Debug output --}}
+            <div class="bg-yellow-100 p-4 mt-4 rounded">
+                <strong>Debug:</strong> Search Query = "{{ request('q', 'NOT_SET') }}"
+            </div>
         </div>
 
         <!-- Products Grid using Livewire -->
