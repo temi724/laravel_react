@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import axios from 'axios';
 import useCartStore from './cartStore';
+import { showToast } from '../lib/toast';
 
 const useCheckoutStore = create((set, get) => ({
   // State
@@ -79,28 +80,30 @@ const useCheckoutStore = create((set, get) => ({
     const errors = {};
 
     if (!state.username.trim()) {
-      errors.username = 'Username is required';
+      errors.username = 'Enter your full name';
     }
 
     if (!state.email.trim()) {
-      errors.email = 'Email is required';
+      errors.email = 'Enter your email address';
     } else if (!/\S+@\S+\.\S+/.test(state.email)) {
       errors.email = 'Please enter a valid email address';
     }
 
     if (!state.phone.trim()) {
-      errors.phone = 'Phone number is required';
+      errors.phone = 'Enter your phone number';
+    } else if (!/^\+?\d{10,15}$/.test(state.phone.trim())) {
+      errors.phone = 'Enter a valid phone number, digits only';
     }
 
     if (state.deliveryOption === 'delivery') {
       if (!state.location.trim()) {
-        errors.location = 'Delivery address is required';
+        errors.location = 'Enter your delivery address';
       }
       if (!state.city.trim()) {
-        errors.city = 'City is required';
+        errors.city = 'Enter your city';
       }
       if (!state.state.trim()) {
-        errors.state = 'State is required';
+        errors.state = 'Enter your state';
       }
     }
 
@@ -217,7 +220,7 @@ const useCheckoutStore = create((set, get) => ({
         get().showToast('Order confirmed and saved! Cart cleared.', 'success');
         return { success: true };
       } else {
-        get().showToast('Failed to save order. Please try again.', 'error');
+        // placeOrder has already told the customer why (a changed price, an item out of stock...)
         return { success: false };
       }
     } catch (error) {
@@ -228,26 +231,7 @@ const useCheckoutStore = create((set, get) => ({
   },
 
   // Toast functionality
-  showToast: (message, type = 'success') => {
-    const toast = document.createElement('div');
-    toast.className = `fixed top-4 right-4 z-50 px-4 py-2 rounded-md text-white font-medium transition-all duration-300 transform translate-x-full ${
-      type === 'error' ? 'bg-red-500' : 'bg-green-500'
-    }`;
-    toast.textContent = message;
-
-    document.body.appendChild(toast);
-
-    setTimeout(() => {
-      toast.classList.remove('translate-x-full');
-    }, 10);
-
-    setTimeout(() => {
-      toast.classList.add('translate-x-full');
-      setTimeout(() => {
-        document.body.removeChild(toast);
-      }, 300);
-    }, 3000);
-  },
+  showToast: (message, type = 'success') => showToast(message, type),
 
   // Reset form
   resetForm: () => {

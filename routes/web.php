@@ -5,75 +5,70 @@ use Illuminate\Support\Str;
 use App\Models\Product;
 use Illuminate\Support\Facades\Log;
 
-// cPanel-specific fix: Debug and prevent GET requests to Livewire upload endpoint
-Route::get('/livewire/upload-file', function (\Illuminate\Http\Request $request) {
-    // Log the request for debugging
-    Log::info('GET request to Livewire upload endpoint detected', [
-        'user_agent' => $request->userAgent(),
-        'referer' => $request->header('referer'),
-        'ip' => $request->ip(),
-        'headers' => $request->headers->all()
-    ]);
-
-    abort(404, 'File upload endpoint requires POST method. Check browser behavior.');
+// cPanel-specific fix: prevent GET requests to Livewire upload endpoint
+Route::get('/livewire/upload-file', function () {
+    abort(404, 'File upload endpoint requires POST method.');
 })->name('livewire.upload-file.blocked');
 
 // CORE ROUTES - Essential for app functionality
-Route::get('/', function () {
-    return view('welcome');
-});
+Route::get('/', App\Http\Controllers\HomeController::class);
 
-// Sitemap
-Route::get('/sitemap.xml', [App\Http\Controllers\SitemapController::class, 'index'])->name('sitemap');
+// What search engines and AI assistants read about the site
+Route::get('/sitemap.xml', [App\Http\Controllers\StorePageController::class, 'sitemap'])->name('sitemap');
+Route::get('/robots.txt', [App\Http\Controllers\StorePageController::class, 'robots']);
+Route::get('/llms.txt', [App\Http\Controllers\StorePageController::class, 'llms']);
 
+// Product listings: everything, and one page per category
+Route::get('/products', [App\Http\Controllers\CatalogController::class, 'products'])->name('products.index');
+Route::get('/category/{slug}', [App\Http\Controllers\CatalogController::class, 'category'])->name('category.show');
+
+// The shop: where it is, how to reach it, common questions
+Route::get('/about', [App\Http\Controllers\StorePageController::class, 'about'])->name('about');
+
+// A product or flash deal. Its address is /product/{slug}, with no id in it. The old
+// /product/{id}/{name} addresses, and the address a product had before it was renamed,
+// are sent on to the current one with a permanent redirect (App\Support\ProductUrls).
 Route::get('/product/{id}/{slug?}', function ($id, $slug = null) {
+    $where = \App\Support\ProductUrls::shared()->locate($id, $slug);
+    if (! $where) {
+        abort(404);
+    }
+    if (isset($where['redirect'])) {
+        return redirect($where['redirect'], 301);
+    }
+
+    $id = $where['id'];
+    $type = $where['type'];
+
     // Cache product data for 30 minutes with eager loading
-    $cacheKey = "product.show.{$id}";
-
-    $productData = cache()->remember($cacheKey, 1800, function () use ($id) {
-        // Try to find as product first with eager loading
-        $product = Product::with('category')->find($id);
-        $type = 'product';
-
-        // If not found as product, try as deal
-        if (!$product) {
-            $product = \App\Models\Deal::with('category')->find($id);
-            $type = 'deal';
-        }
+    $productData = cache()->remember("product.show.{$id}", 1800, function () use ($id, $type) {
+        $product = $type === 'deal'
+            ? \App\Models\Deal::with('category')->find($id)
+            : Product::with('category')->find($id);
 
         return compact('product', 'type');
     });
 
-    // If neither found, return 404
     if (!$productData['product']) {
         abort(404);
-    }
-
-    $product = $productData['product'];
-
-    // Generate the correct slug
-    $correctSlug = Str::slug($product->product_name);
-
-    // If slug is missing or incorrect, redirect to the correct URL
-    if (!$slug || $slug !== $correctSlug) {
-        return redirect()->route('product.show', [
-            'id' => $id,
-            'slug' => $correctSlug
-        ], 301);
     }
 
     return view('react.product-show', $productData);
 })->name('product.show');
 
-Route::get('/search', function () {
-    $searchQuery = request('q', '');
-    Log::info('Search route accessed', [
-        'query' => $searchQuery,
-        'all_params' => request()->all(),
-        'url' => request()->fullUrl()
-    ]);
-    return view('search.results');
-})->name('search.results');
+// A bundle: products that go together, sold for one price
+Route::get('/bundle/{slug}', function (string $slug, \App\Services\Offers $offers) {
+    $bundle = \App\Models\Bundle::query()->active()->with('items.product.category')->where('slug', $slug)->first();
+
+    // A bundle whose product has been deleted can no longer be sold
+    if (! $bundle || $bundle->items->isEmpty() || $bundle->items->contains(fn ($item) => $item->product === null)) {
+        abort(404);
+    }
+
+    return view('bundle.show', ['bundle' => $offers->presentBundle($bundle)]);
+})->name('bundle.show');
+
+Route::get('/search', [App\Http\Controllers\CatalogController::class, 'search'])->name('search.results');
 
 Route::get('/cart', function () {
     return view('cart.index');
@@ -132,8 +127,11 @@ Route::get('/admin/login', function () {
 })->name('admin.login');
 
 // Admin Logout Route
-Route::post('/admin/logout', function () {
-    session()->flush();
+Route::post('/admin/logout', function (\Illuminate\Http\Request $request) {
+    // End the session completely: a new id and a new CSRF token
+    $request->session()->invalidate();
+    $request->session()->regenerateToken();
+
     return redirect()->route('admin.login');
 })->name('admin.logout');
 
@@ -149,7 +147,7 @@ Route::get('/storage/products/{filename}', function ($filename) {
     $type = mime_content_type($path);
 
     return response($file, 200)->header('Content-Type', $type);
-})->where('filename', '.*\.(jpg|jpeg|png|gif|svg)$');
+})->where('filename', '[A-Za-z0-9_\-]+\.(jpg|jpeg|png|gif|webp)');
 
 // Protected Admin Routes - Now React components
 Route::prefix('admin')->middleware(['web', 'admin.auth'])->group(function () {
@@ -167,19 +165,33 @@ Route::prefix('admin')->middleware(['web', 'admin.auth'])->group(function () {
 
     Route::get('/products/create', function () {
         return view('react.admin-products', ['mode' => 'create']);
-    })->name('admin.products.create');
+    })->middleware('admin.can:products.create')->name('admin.products.create');
 
     Route::get('/products/{product}/edit', function ($product) {
         return view('react.admin-products', ['mode' => 'edit', 'productId' => $product]);
-    })->name('admin.products.edit');
+    })->middleware('admin.can:products.edit')->name('admin.products.edit');
 
     Route::get('/sales', function () {
         return view('react.admin-sales');
-    })->name('admin.sales');
+    })->middleware('admin.can:sales.view')->name('admin.sales');
 
     Route::get('/orders', function () {
         return view('react.admin-orders');
-    })->name('admin.orders');
+    })->middleware('admin.can:sales.view')->name('admin.orders');
+
+    // The deal of the day, drops and bundles
+    Route::get('/offers', function () {
+        return view('react.admin-offers');
+    })->middleware('admin.can:offers.manage')->name('admin.offers');
+
+    Route::get('/categories', function () {
+        return view('react.admin-categories');
+    })->middleware('admin.can:categories.manage')->name('admin.categories');
+
+    // Settings: the super admin manages the other admins
+    Route::get('/settings', function () {
+        return view('react.admin-settings');
+    })->middleware('admin.can:super')->name('admin.settings');
 
     Route::get('/invoice/{sale}', function ($saleId) {
         $sale = \App\Models\Sales::find($saleId);
@@ -187,7 +199,7 @@ Route::prefix('admin')->middleware(['web', 'admin.auth'])->group(function () {
             abort(404);
         }
         return view('admin.invoice', compact('sale'));
-    })->name('admin.invoice');
+    })->middleware('admin.can:sales.view')->name('admin.invoice');
 
     Route::get('/invoice/{sale}/pdf', function ($saleId) {
         $sale = \App\Models\Sales::find($saleId);
@@ -205,10 +217,12 @@ Route::prefix('admin')->middleware(['web', 'admin.auth'])->group(function () {
         // Generate PDF using DomPDF with proper facade and UTF-8 encoding
         $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('admin.invoice-pdf', compact('sale', 'orderDetails', 'total'));
 
-        // Set UTF-8 encoding options
+        // Embed only the glyphs the invoice uses, so the file stays small
         $pdf->getDomPDF()->getOptions()->set('isHtml5ParserEnabled', true);
-        $pdf->getDomPDF()->getOptions()->set('isPhpEnabled', true);
+        $pdf->getDomPDF()->getOptions()->set('isFontSubsettingEnabled', true);
 
-        return $pdf->download("invoice-{$saleId}.pdf");
-    })->name('admin.invoice.pdf');
+        $number = $sale->order_id ?: $sale->receipt_number ?: $saleId;
+
+        return $pdf->download("invoice-{$number}.pdf");
+    })->middleware('admin.can:sales.view')->name('admin.invoice.pdf');
 });

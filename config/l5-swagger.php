@@ -65,9 +65,10 @@ return [
              * Middleware allows to prevent unexpected access to API documentation
              */
             'middleware' => [
-                'api' => [],
+                // The API documentation is for signed-in admins only
+                'api' => ['web', 'admin.auth'],
                 'asset' => [],
-                'docs' => [],
+                'docs' => ['web', 'admin.auth'],
                 'oauth2_callback' => [],
             ],
 

@@ -1,10 +1,10 @@
 import React, { Suspense, lazy } from 'react';
 
-// Loading component for admin components
+// Shown while an admin screen's code is being fetched
 const AdminLoadingSpinner = () => (
-    <div className="flex items-center justify-center min-h-[400px]">
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-500"></div>
-        <span className="ml-4 text-lg text-gray-600">Loading admin panel...</span>
+    <div className="space-y-4" aria-busy="true" aria-label="Loading">
+        <div className="h-10 w-72 animate-pulse rounded-full bg-gray-200/70" />
+        <div className="h-64 animate-pulse rounded-2xl bg-gray-200/70" />
     </div>
 );
 
@@ -15,6 +15,9 @@ const AdminProductManager = lazy(() => import('./AdminProductManager.jsx'));
 const AdminSalesManager = lazy(() => import('./AdminSalesManager.jsx'));
 const AdminOrderManager = lazy(() => import('./AdminOrderManager.jsx'));
 const OfflineSales = lazy(() => import('./OfflineSales.jsx'));
+const AdminCategories = lazy(() => import('./AdminCategories.jsx'));
+const AdminSettings = lazy(() => import('./AdminSettings.jsx'));
+const AdminOffers = lazy(() => import('./AdminOffers.jsx'));
 
 // Wrapper components with Suspense
 export const LazyAdminLogin = (props) => (
@@ -50,6 +53,24 @@ export const LazyAdminOrderManager = (props) => (
 export const LazyOfflineSales = (props) => (
     <Suspense fallback={<AdminLoadingSpinner />}>
         <OfflineSales {...props} />
+    </Suspense>
+);
+
+export const LazyAdminCategories = (props) => (
+    <Suspense fallback={<AdminLoadingSpinner />}>
+        <AdminCategories {...props} />
+    </Suspense>
+);
+
+export const LazyAdminSettings = (props) => (
+    <Suspense fallback={<AdminLoadingSpinner />}>
+        <AdminSettings {...props} />
+    </Suspense>
+);
+
+export const LazyAdminOffers = (props) => (
+    <Suspense fallback={<AdminLoadingSpinner />}>
+        <AdminOffers {...props} />
     </Suspense>
 );
 

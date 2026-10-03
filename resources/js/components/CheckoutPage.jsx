@@ -1,54 +1,62 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef } from 'react';
+import { Add, ArrowRight, Bank, Copy, Shop, ShoppingCart, TickCircle, TruckFast, Whatsapp } from 'iconsax-react';
 import useCheckoutStore from '../stores/checkoutStore';
+import ProductImage from './ProductImage';
+import { formatPrice } from '../lib/format';
+import store from '../lib/store';
 
-const InputField = ({
-  id,
-  label,
-  type = 'text',
-  value,
-  onChange,
-  required = false,
-  placeholder = '',
-  options = null,
-  errors = {}
-}) => (
-  <div>
-    <label htmlFor={id} className="block text-sm font-medium text-gray-700 mb-2">
-      {label} {required && <span className="text-red-500">*</span>}
+// Keeps digits and one leading plus, so letters can never be typed or pasted into the phone field
+const sanitizePhone = (value) => {
+  const digits = value.replace(/\D/g, '').slice(0, 15);
+  return value.trim().startsWith('+') ? `+${digits}` : digits;
+};
+
+const InputField = ({ id, label, type = 'text', value, onChange, required = false, placeholder = '', autoComplete, inputMode, errors = {} }) => (
+  <div className="flex flex-col gap-2">
+    <label htmlFor={id} className="text-sm font-semibold">
+      {label}
+      {!required && <span className="ml-1 font-normal text-gray-500">(optional)</span>}
     </label>
-    {options ? (
-      <select
-        id={id}
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        className={`w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-          errors[id] ? 'border-red-300' : 'border-gray-300'
-        }`}
-        required={required}
-      >
-        {options.map((option) => (
-          <option key={option.value} value={option.value}>
-            {option.label}
-          </option>
-        ))}
-      </select>
-    ) : (
-      <input
-        type={type}
-        id={id}
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        placeholder={placeholder}
-        className={`w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-          errors[id] ? 'border-red-300' : 'border-gray-300'
-        }`}
-        required={required}
-      />
-    )}
+    <input
+      type={type}
+      id={id}
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      placeholder={placeholder}
+      autoComplete={autoComplete}
+      inputMode={inputMode}
+      aria-invalid={Boolean(errors[id])}
+      aria-describedby={errors[id] ? `${id}-error` : undefined}
+      className={`field ${errors[id] ? 'field-error' : ''}`}
+      required={required}
+    />
     {errors[id] && (
-      <p className="mt-1 text-sm text-red-600">{errors[id]}</p>
+      <p id={`${id}-error`} className="text-sm text-sale">
+        {errors[id]}
+      </p>
     )}
   </div>
+);
+
+const DeliveryOption = ({ value, checked, onChange, icon: Icon, title, description }) => (
+  <label
+    className={`flex cursor-pointer items-start gap-3 rounded-2xl border p-4 transition-colors ${
+      checked ? 'border-brand bg-brand-light' : 'border-gray-200 bg-white hover:border-gray-400'
+    }`}
+  >
+    <input type="radio" name="delivery" value={value} checked={checked} onChange={(e) => onChange(e.target.value)} className="sr-only" />
+    <Icon size={22} color="currentColor" variant="Linear" className={`mt-0.5 shrink-0 ${checked ? 'text-brand' : 'text-gray-500'}`} />
+    <span className="min-w-0 flex-1">
+      <span className={`block text-sm font-bold ${checked ? 'text-brand' : ''}`}>{title}</span>
+      <span className="mt-0.5 block text-sm text-gray-600">{description}</span>
+    </span>
+    <span
+      className={`mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full border ${checked ? 'border-brand bg-brand' : 'border-gray-300 bg-white'}`}
+      aria-hidden="true"
+    >
+      {checked && <span className="size-2 rounded-full bg-white" />}
+    </span>
+  </label>
 );
 
 const CheckoutPage = () => {
@@ -70,17 +78,36 @@ const CheckoutPage = () => {
     generatedOrderId,
     setFormField,
     showPaymentModal,
-    placeOrder,
-    openBankModal,
     closeBankModal,
     completeOrder,
     showToast,
     initialize,
   } = useCheckoutStore();
 
+  const details = store();
+  const modalRef = useRef(null);
+
   useEffect(() => {
     initialize();
   }, [initialize]);
+
+  // While the transfer details are open: Escape closes them and the page behind does not scroll
+  useEffect(() => {
+    if (!showBankModal) return undefined;
+
+    const onKeyDown = (event) => {
+      if (event.key === 'Escape') closeBankModal();
+    };
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    document.addEventListener('keydown', onKeyDown);
+    modalRef.current?.focus();
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      document.removeEventListener('keydown', onKeyDown);
+    };
+  }, [showBankModal, closeBankModal]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -95,533 +122,377 @@ const CheckoutPage = () => {
           delivery_option: deliveryOption,
           cart_total: cartTotal,
           cart_items: cartItems.length,
-          order_id: generatedOrderId
+          order_id: generatedOrderId,
         });
       }
       // Payment modal is now shown with generated order ID
-      // No API call made yet - that happens when user clicks Continue
+      // No API call made yet - that happens when the customer confirms the order
     }
   };
 
-  // Copy functions for bank details
-  const copyAccountDetails = async () => {
-    const accountDetails = `Account Name: Murphylog Global Concept
-Bank: Providus Bank
-Account Number: 5401799184`;
-
+  const copyText = async (text, message) => {
     try {
-      await navigator.clipboard.writeText(accountDetails);
-      showToast('Account details copied to clipboard!', 'success');
+      await navigator.clipboard.writeText(text);
     } catch (err) {
       // Fallback for older browsers
-      const textArea = document.createElement("textarea");
-      textArea.value = accountDetails;
+      const textArea = document.createElement('textarea');
+      textArea.value = text;
       document.body.appendChild(textArea);
       textArea.select();
       document.execCommand('copy');
       document.body.removeChild(textArea);
-      showToast('Account details copied to clipboard!', 'success');
     }
-  };
-
-  const copyWhatsAppNumber = async () => {
-    const whatsappNumber = '+234 802 491 3553';
-
-    try {
-      await navigator.clipboard.writeText(whatsappNumber);
-      showToast('WhatsApp number copied to clipboard!', 'success');
-    } catch (err) {
-      // Fallback for older browsers
-      const textArea = document.createElement("textarea");
-      textArea.value = whatsappNumber;
-      document.body.appendChild(textArea);
-      textArea.select();
-      document.execCommand('copy');
-      document.body.removeChild(textArea);
-      showToast('WhatsApp number copied to clipboard!', 'success');
-    }
-  };
-
-  const copyAccountNumber = async () => {
-    const accountNumber = '5401799184';
-
-    try {
-      await navigator.clipboard.writeText(accountNumber);
-      showToast('Account number copied to clipboard!', 'success');
-    } catch (err) {
-      // Fallback for older browsers
-      const textArea = document.createElement("textarea");
-      textArea.value = accountNumber;
-      document.body.appendChild(textArea);
-      textArea.select();
-      document.execCommand('copy');
-      document.body.removeChild(textArea);
-      showToast('Account number copied to clipboard!', 'success');
-    }
+    showToast(message, 'success');
   };
 
   if (cartItems.length === 0 && !isLoading) {
     return (
-      <div className="min-h-[60vh] flex items-center justify-center">
-        <div className="text-center">
-          <svg className="mx-auto h-24 w-24 text-gray-300 mb-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
-          </svg>
-          <h2 className="text-2xl font-semibold text-gray-900 mb-2">Your cart is empty</h2>
-          <p className="text-gray-600 mb-8">Add some items to your cart before proceeding to checkout.</p>
-          <a
-            href="/"
-            className="inline-flex items-center px-6 py-3 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors"
-          >
-            Continue Shopping
-          </a>
-        </div>
+      <div className="panel mx-auto flex max-w-xl flex-col items-center px-6 py-16 text-center">
+        <span className="flex size-16 items-center justify-center rounded-full bg-gray-100 text-gray-500">
+          <ShoppingCart size={28} color="currentColor" variant="Linear" />
+        </span>
+        <h1 className="mt-5 text-2xl font-extrabold tracking-tight">Your cart is empty</h1>
+        <p className="mt-2 max-w-sm text-sm text-gray-600">Add some items to your cart before proceeding to checkout.</p>
+        <a href="/#products" className="btn btn-lg btn-primary mt-6">
+          Browse products
+          <ArrowRight size={18} color="currentColor" variant="Linear" />
+        </a>
       </div>
     );
   }
 
+  const whatsappProofUrl = `https://wa.me/${details.whatsapp}?text=${encodeURIComponent(`Payment Proof for Order ID: ${generatedOrderId}`)}`;
+
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-      <div className="border-b border-gray-200 pb-6 mb-6">
-        <h1 className="text-2xl sm:text-3xl font-semibold text-gray-900">Checkout</h1>
-        <p className="text-gray-600 mt-1">Complete your order securely</p>
-      </div>
+    <div>
+      <h1 className="mb-5 text-2xl font-extrabold tracking-tight sm:text-3xl">Checkout</h1>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-6">
-        {/* Order Form */}
-        <div className="lg:col-span-2">
-          <form onSubmit={handleSubmit} className="space-y-4">
-            {/* Customer Information */}
-            <div className="bg-white rounded-lg border border-gray-200 p-4 shadow-xs">
-              <h2 className="text-lg font-semibold text-gray-900 mb-4">Customer Information</h2>
+      <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-[1fr_400px]">
+        {/* Order form */}
+        <form id="checkout-form" onSubmit={handleSubmit} className="space-y-4" noValidate>
+          {/* Customer information */}
+          <section className="panel p-5 sm:p-6">
+            <h2 className="text-lg font-bold">Your details</h2>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <InputField
-                  id="username"
-                  label="Full Name"
-                  value={username}
-                  onChange={(value) => setFormField('username', value)}
-                  placeholder="Enter your full name"
-                  required
-                  errors={errors}
-                />
+            <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2">
+              <InputField
+                id="username"
+                label="Full name"
+                value={username}
+                onChange={(value) => setFormField('username', value)}
+                placeholder="Adaeze Okonkwo"
+                autoComplete="name"
+                required
+                errors={errors}
+              />
 
+              <InputField
+                id="phone"
+                label="Phone number"
+                type="tel"
+                value={phone}
+                onChange={(value) => setFormField('phone', sanitizePhone(value))}
+                placeholder="08030000000"
+                autoComplete="tel"
+                inputMode="tel"
+                required
+                errors={errors}
+              />
+
+              <div className="md:col-span-2">
                 <InputField
                   id="email"
-                  label="Email Address"
+                  label="Email address"
                   type="email"
                   value={email}
                   onChange={(value) => setFormField('email', value)}
-                  placeholder="your@email.com"
+                  placeholder="you@example.com"
+                  autoComplete="email"
+                  required
+                  errors={errors}
+                />
+              </div>
+            </div>
+          </section>
+
+          {/* Delivery options */}
+          <section className="panel p-5 sm:p-6">
+            <h2 className="text-lg font-bold">Pickup or delivery</h2>
+
+            <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2" role="radiogroup" aria-label="Pickup or delivery">
+              <DeliveryOption
+                value="pickup"
+                checked={deliveryOption === 'pickup'}
+                onChange={(value) => setFormField('deliveryOption', value)}
+                icon={Shop}
+                title="Store pickup"
+                description="Pick up your order from our store"
+              />
+              <DeliveryOption
+                value="delivery"
+                checked={deliveryOption === 'delivery'}
+                onChange={(value) => setFormField('deliveryOption', value)}
+                icon={TruckFast}
+                title="Home delivery"
+                description="We'll deliver to your address"
+              />
+            </div>
+
+            {/* Store address for pickup */}
+            {deliveryOption === 'pickup' && (
+              <dl className="mt-4 grid grid-cols-1 gap-x-8 gap-y-3 rounded-2xl bg-gray-50 p-4 text-sm sm:grid-cols-2">
+                <div>
+                  <dt className="text-gray-500">Pickup location</dt>
+                  <dd className="mt-0.5 font-semibold">
+                    {details.legal_name}
+                    <br />
+                    {details.address.line}
+                    <br />
+                    {details.address.area}
+                  </dd>
+                </div>
+                <div className="space-y-3">
+                  <div>
+                    <dt className="text-gray-500">Hours</dt>
+                    <dd className="mt-0.5 font-semibold">{details.hours}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-gray-500">Phone</dt>
+                    <dd className="mt-0.5 font-semibold">
+                      <a href={`tel:${details.phone}`} className="hover:text-brand">
+                        {details.phone_display}
+                      </a>
+                    </dd>
+                  </div>
+                </div>
+              </dl>
+            )}
+
+            {/* Delivery address fields */}
+            {deliveryOption === 'delivery' && (
+              <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2">
+                <div className="md:col-span-2">
+                  <InputField
+                    id="location"
+                    label="Delivery address"
+                    value={location}
+                    onChange={(value) => setFormField('location', value)}
+                    placeholder="House number and street"
+                    autoComplete="street-address"
+                    required
+                    errors={errors}
+                  />
+                </div>
+
+                <InputField
+                  id="city"
+                  label="City"
+                  value={city}
+                  onChange={(value) => setFormField('city', value)}
+                  placeholder="Ikeja"
+                  autoComplete="address-level2"
                   required
                   errors={errors}
                 />
 
                 <InputField
-                  id="phone"
-                  label="Phone Number"
-                  type="tel"
-                  value={phone}
-                  onChange={(value) => setFormField('phone', value)}
-                  placeholder="+234 XXX XXX XXXX"
+                  id="state"
+                  label="State"
+                  value={state}
+                  onChange={(value) => setFormField('state', value)}
+                  placeholder="Lagos"
+                  autoComplete="address-level1"
                   required
                   errors={errors}
                 />
               </div>
-            </div>
+            )}
+          </section>
 
-            {/* Delivery Options */}
-            <div className="bg-white rounded-lg border border-gray-200 p-4 shadow-xs">
-              <h2 className="text-lg font-semibold text-gray-900 mb-4">Delivery Options</h2>
+          {/* Payment method */}
+          <section className="panel p-5 sm:p-6">
+            <h2 className="text-lg font-bold">Payment</h2>
 
-              <div className="space-y-3">
-                <div className="flex items-center space-x-3">
-                  <input
-                    type="radio"
-                    id="pickup"
-                    name="delivery"
-                    value="pickup"
-                    checked={deliveryOption === 'pickup'}
-                    onChange={(e) => setFormField('deliveryOption', e.target.value)}
-                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300"
-                  />
-                  <label htmlFor="pickup" className="flex-1">
-                    <div className="font-medium text-gray-900">Store Pickup</div>
-                    <div className="text-sm text-gray-600">Pick up your order from our store</div>
-                  </label>
-                </div>
-
-                <div className="flex items-center space-x-3">
-                  <input
-                    type="radio"
-                    id="delivery"
-                    name="delivery"
-                    value="delivery"
-                    checked={deliveryOption === 'delivery'}
-                    onChange={(e) => setFormField('deliveryOption', e.target.value)}
-                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300"
-                  />
-                  <label htmlFor="delivery" className="flex-1">
-                    <div className="font-medium text-gray-900">Home Delivery</div>
-                    <div className="text-sm text-gray-600">We'll deliver to your address</div>
-                  </label>
-                </div>
+            <div className="mt-4 flex items-start gap-3 rounded-2xl border border-brand bg-brand-light p-4">
+              <Bank size={22} color="currentColor" variant="Linear" className="mt-0.5 shrink-0 text-brand" />
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-bold text-brand">Bank transfer</p>
+                <p className="mt-0.5 text-sm text-gray-600">You will see our account details in the next step.</p>
               </div>
+              <TickCircle size={22} color="currentColor" variant="Bold" className="shrink-0 text-brand" />
+            </div>
+          </section>
+        </form>
 
-              {/* Store Address for Pickup */}
-              {deliveryOption === 'pickup' && (
-                <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                  <h3 className="font-medium text-blue-900 mb-2">Pickup Location</h3>
-                  <div className="text-sm text-blue-800 space-y-1">
-                    <p className="font-medium">Murphylog Global Concept</p>
-                    <p>12, Ola ayeni street</p>
-                    <p>Ikeja, Lagos State, Nigeria</p>
-                    <p className="mt-2">
-                      <span className="font-medium">Hours:</span> Mon-Sat 9:00 AM - 6:30 PM
-                    </p>
-                    <p>
-                      <span className="font-medium">Phone:</span> +234 801 234 5678
-                    </p>
-                  </div>
+        {/* Order summary */}
+        <aside className="panel p-5 sm:p-6 lg:sticky lg:top-36" aria-label="Order summary">
+          <h2 className="text-lg font-bold">Order summary</h2>
+
+          {/* Cart items */}
+          <ul className="mt-4 space-y-4">
+            {cartItems.map((item) => (
+              <li key={item.cartItemId || item.id} className="flex items-center gap-3">
+                <ProductImage src={item.image} className="size-14 rounded-xl" iconSize={20} />
+
+                <div className="min-w-0 flex-1">
+                  <h3 className="truncate text-sm font-medium">{item.name}</h3>
+                  <p className="truncate text-xs text-gray-500">
+                    Qty {item.quantity}
+                    {item.selected_storage ? `, ${item.selected_storage}` : ''}
+                    {item.selected_color ? `, ${item.selected_color}` : ''}
+                    {item.note ? `, ${item.note}` : ''}
+                  </p>
                 </div>
-              )}
 
-              {/* Delivery Address Fields */}
-              {deliveryOption === 'delivery' && (
-                <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="md:col-span-2">
-                    <InputField
-                      id="location"
-                      label="Delivery Address"
-                      value={location}
-                      onChange={(value) => setFormField('location', value)}
-                      placeholder="Enter your delivery address"
-                      required
-                      errors={errors}
-                    />
-                  </div>
+                <p className="shrink-0 text-sm font-semibold tabular-nums">{formatPrice(item.subtotal)}</p>
+              </li>
+            ))}
+          </ul>
 
-                  <InputField
-                    id="city"
-                    label="City"
-                    value={city}
-                    onChange={(value) => setFormField('city', value)}
-                    placeholder="Enter your city"
-                    required
-                    errors={errors}
-                  />
-
-                  <InputField
-                    id="state"
-                    label="State"
-                    value={state}
-                    onChange={(value) => setFormField('state', value)}
-                    placeholder="Enter your state"
-                    required
-                    errors={errors}
-                  />
-                </div>
-              )}
+          {/* Order total */}
+          <dl className="mt-5 space-y-3 border-t border-gray-200 pt-4 text-sm">
+            <div className="flex justify-between">
+              <dt className="text-gray-600">
+                Subtotal, {cartCount} {cartCount === 1 ? 'item' : 'items'}
+              </dt>
+              <dd className="font-semibold tabular-nums">{formatPrice(cartTotal)}</dd>
             </div>
 
-            {/* Payment Method */}
-            <div className="bg-white rounded-lg border border-gray-200 p-4 shadow-xs">
-              <h2 className="text-lg font-semibold text-gray-900 mb-4">Payment Method</h2>
-
-              <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
-                <div className="flex items-center">
-                  <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center mr-3">
-                    <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
-                    </svg>
-                  </div>
-                  <div>
-                    <h3 className="text-sm font-semibold text-blue-900">Bank Transfer</h3>
-                    <p className="text-xs text-blue-700">Secure bank transfer payment</p>
-                  </div>
-                  <div className="ml-auto">
-                    <div className="w-4 h-4 bg-blue-600 rounded-full flex items-center justify-center">
-                      <svg className="w-2 h-2 text-white" fill="currentColor" viewBox="0 0 8 8">
-                        <circle cx="4" cy="4" r="3"/>
-                      </svg>
-                    </div>
-                  </div>
-                </div>
-              </div>
+            <div className="flex justify-between">
+              <dt className="text-gray-600">{deliveryOption === 'delivery' ? 'Delivery fee' : 'Store pickup'}</dt>
+              <dd className="text-gray-600">{deliveryOption === 'delivery' ? 'Agreed with the rider' : 'Free'}</dd>
             </div>
 
-            {/* Submit Button */}
-            <button
-              type="submit"
-              disabled={isLoading}
-              className="w-full bg-blue-600 text-white py-3 px-6 rounded-lg font-semibold hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-all duration-200 shadow-md hover:shadow-lg"
-            >
-              {isLoading ? 'Processing Order...' : 'Place Order'}
-            </button>
-          </form>
-        </div>
-
-        {/* Order Summary */}
-        <div className="lg:col-span-1">
-          <div className="bg-white rounded-lg border border-gray-200 p-4 shadow-xs sticky top-4">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">Order Summary</h2>
-
-            {/* Cart Items */}
-            <div className="space-y-3 mb-4">
-              {cartItems.map((item) => (
-                <div key={item.id} className="flex items-center space-x-2">
-                  <div className="w-12 h-12 bg-gray-200 rounded-md flex-shrink-0 overflow-hidden">
-                    {item.image ? (
-                      <img
-                        src={item.image}
-                        alt={item.name}
-                        className="w-full h-full object-cover"
-                      />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center text-gray-400">
-                        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                        </svg>
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="flex-1 min-w-0">
-                    <h4 className="text-xs font-medium text-gray-900 truncate">{item.name}</h4>
-                    <p className="text-xs text-gray-600">Qty: {item.quantity}</p>
-
-                    {item.selected_storage && (
-                      <div className="mt-1">
-                        <p className="text-xs text-gray-700 font-medium">
-                          Storage: {item.selected_storage}
-                        </p>
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="text-right">
-                    <p className="text-xs font-medium text-gray-900">
-                      ₦{item.subtotal.toLocaleString('en-NG', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                    </p>
-                  </div>
-                </div>
-              ))}
+            <div className="flex items-baseline justify-between border-t border-gray-200 pt-4">
+              <dt className="text-base font-bold">Total</dt>
+              <dd className="text-2xl font-extrabold tracking-tight tabular-nums">{formatPrice(cartTotal)}</dd>
             </div>
+          </dl>
 
-            {/* Order Total */}
-            <div className="space-y-2 border-t pt-3">
-              <div className="flex justify-between text-xs">
-                <span>Subtotal ({cartCount} {cartCount === 1 ? 'item' : 'items'})</span>
-                <span>₦{cartTotal.toLocaleString('en-NG', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-              </div>
+          {deliveryOption === 'delivery' && (
+            <p className="mt-3 text-xs leading-relaxed text-gray-600">
+              The delivery fee is not included. It can be negotiated with the rider based on your location.
+            </p>
+          )}
 
-              {deliveryOption === 'delivery' && (
-                <div className="flex justify-between text-xs">
-                  <span>Delivery Fee</span>
-                  <span className="text-orange-600">Negotiable</span>
-                </div>
-              )}
-
-              <div className="flex justify-between text-sm font-semibold border-t pt-2">
-                <span>Total</span>
-                <span>₦{cartTotal.toLocaleString('en-NG', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}{deliveryOption === 'delivery' ? ' + delivery' : ''}</span>
-              </div>
-
-              {deliveryOption === 'delivery' && (
-                <p className="text-xs text-orange-600 mt-2">
-                  * Delivery fee can be negotiated with the rider based on your location
-                </p>
-              )}
-            </div>
-          </div>
-        </div>
+          {/* Submit button */}
+          <button type="submit" form="checkout-form" disabled={isLoading} className="btn btn-lg btn-primary mt-6 w-full">
+            {isLoading ? 'Processing order' : 'Place order'}
+            {!isLoading && <ArrowRight size={18} color="currentColor" variant="Linear" />}
+          </button>
+        </aside>
       </div>
 
-      {/* Bank Transfer Modal */}
+      {/* Bank transfer details */}
       {showBankModal && (
-        <div className="fixed inset-0 z-50 overflow-y-auto" style={{backgroundColor: 'rgba(0, 0, 0, 0.5)', backdropFilter: 'blur(5px)'}}>
-          <div className="flex items-center justify-center min-h-screen p-4">
-            <div className="bg-white rounded-3xl shadow-2xl max-w-md w-full mx-4 transform transition-all duration-300">
-              {/* Modal Header */}
-              <div className="bg-gradient-to-r from-blue-600 to-purple-600 text-white p-6 rounded-t-3xl">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center">
-                    <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center mr-3">
-                      <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
-                      </svg>
-                    </div>
-                    <h3 className="text-xl font-bold">Bank Transfer Details</h3>
-                  </div>
-                  <button onClick={closeBankModal} className="w-8 h-8 bg-white/20 rounded-lg flex items-center justify-center hover:bg-white/30 transition-colors">
-                    <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12"></path>
-                    </svg>
-                  </button>
-                </div>
+        <div className="fixed inset-0 z-50 flex items-end justify-center overflow-y-auto bg-ink/50 sm:items-center sm:p-4">
+          <div className="absolute inset-0" onClick={closeBankModal} aria-hidden="true" />
+
+          <div
+            ref={modalRef}
+            tabIndex={-1}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="bank-modal-title"
+            className="relative max-h-[92dvh] w-full max-w-md animate-rise overflow-y-auto rounded-t-3xl bg-white p-5 outline-none sm:rounded-3xl sm:p-6"
+          >
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <h2 id="bank-modal-title" className="text-xl font-extrabold tracking-tight">
+                  Pay by bank transfer
+                </h2>
+                <p className="mt-1 text-sm text-gray-600">
+                  Order <span className="font-semibold text-ink">{generatedOrderId}</span>
+                </p>
               </div>
+              <button
+                type="button"
+                onClick={closeBankModal}
+                aria-label="Close"
+                className="flex size-9 shrink-0 items-center justify-center rounded-full text-gray-500 transition-colors hover:bg-gray-100 hover:text-ink"
+              >
+                <Add size={24} color="currentColor" variant="Linear" className="rotate-45" />
+              </button>
+            </div>
 
-              {/* Modal Body */}
-              <div className="p-6 space-y-6">
-                {/* Order ID */}
-                <div className="bg-blue-50 rounded-xl p-4">
-                  <div className="flex items-center">
-                    <svg className="w-5 h-5 text-blue-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
-                    </svg>
-                    <span className="text-sm font-semibold text-blue-800">Order ID:</span>
-                    <span className="text-sm font-bold text-blue-900 ml-2">{generatedOrderId}</span>
-                  </div>
-                </div>
-
-                {/* Bank Details */}
-                <div className="bg-gray-50 rounded-xl p-4 space-y-3">
-                  <h4 className="font-bold text-gray-900 mb-3 flex items-center">
-                    <svg className="w-5 h-5 text-green-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
-                    </svg>
-                    Transfer To:
-                  </h4>
-
-                  <div className="space-y-2">
-                    <div className="flex justify-between">
-                      <span className="text-sm font-medium text-gray-600">Account Name:</span>
-                      <span className="text-sm font-bold text-gray-900">Murphylog Global Concept</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-sm font-medium text-gray-600">Bank:</span>
-                      <span className="text-sm font-bold text-gray-900">Providus Bank</span>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm font-medium text-gray-600">Account Number:</span>
-                      <div className="flex items-center space-x-2">
-                        <span className="text-sm font-bold text-gray-900">5401799184</span>
-                        <button
-                          onClick={copyAccountNumber}
-                          className="p-1 text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded transition-colors"
-                          title="Copy account number">
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
-                          </svg>
-                        </button>
-                      </div>
-                    </div>
-
-                    {/* Copy All Account Details Button */}
-                    <div className="mt-3">
-                      <button
-                        onClick={copyAccountDetails}
-                        className="flex items-center justify-center w-full py-2 px-3 bg-blue-500 hover:bg-blue-600 text-white text-sm font-medium rounded-lg transition-all duration-300">
-                        <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
-                        </svg>
-                        Copy All Account Details
-                      </button>
-                    </div>
-
-                    <div className="flex justify-between pt-2">
-                      <span className="text-base font-bold text-gray-900">Amount:</span>
-                      <span className="text-lg font-bold text-green-600">₦{cartTotal.toLocaleString('en-NG', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Instructions */}
-                <div className="bg-yellow-50 rounded-xl p-4">
-                  <div className="flex items-start">
-                    <svg className="w-5 h-5 text-yellow-600 mr-2 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                    </svg>
-                    <div>
-                      <h5 className="font-bold text-yellow-800 mb-2">Important Instructions:</h5>
-                      <ul className="text-sm text-yellow-700 space-y-1">
-                        <li>• Make the transfer to the account details above</li>
-                        <li>• Include your Order ID in the transfer description</li>
-                        <li>• Send proof of payment via WhatsApp</li>
-                      </ul>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Contact Options */}
-                <div className="bg-green-50 rounded-xl p-4">
-                  <h5 className="font-bold text-green-800 mb-3 flex items-center">
-                    <svg className="w-5 h-5 text-green-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path>
-                    </svg>
-                    Send Proof of Payment:
-                  </h5>
-                  <div className="space-y-2">
-                    <a href={`https://wa.me/2348024913553?text=Payment%20Proof%20for%20Order%20ID:%20${generatedOrderId}`}
-                       target="_blank"
-                       rel="noopener noreferrer"
-                       className="flex items-center p-3 bg-white rounded-lg hover:shadow-md transition-all duration-300">
-                      <div className="w-8 h-8 bg-green-500 rounded-lg flex items-center justify-center mr-3">
-                        <svg className="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 24 24">
-                          <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893A11.821 11.821 0 0020.885 3.785"/>
-                        </svg>
-                      </div>
-                      <div>
-                        <span className="text-sm font-bold text-gray-900">WhatsApp</span>
-                        <p className="text-xs text-gray-600">+234 802 491 3553</p>
-                      </div>
-                    </a>
-
-                    {/* Copy WhatsApp Number Button */}
-                    <button
-                      onClick={copyWhatsAppNumber}
-                      className="flex items-center justify-center w-full py-2 px-3 bg-green-500 hover:bg-green-600 text-white text-sm font-medium rounded-lg transition-all duration-300">
-                      <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
-                      </svg>
-                      Copy WhatsApp Number
-                    </button>
-                  </div>
-                </div>
+            {/* Account to pay into */}
+            <div className="mt-5 rounded-3xl bg-ink p-5 text-white">
+              <p className="text-sm text-white/60">{details.bank.bank_name}</p>
+              <div className="mt-1 flex items-center justify-between gap-3">
+                <p className="text-3xl font-extrabold tracking-tight tabular-nums">{details.bank.account_number}</p>
+                <button
+                  type="button"
+                  onClick={() => copyText(details.bank.account_number, 'Account number copied')}
+                  className="btn h-9 bg-white px-4 text-ink hover:bg-gray-100"
+                >
+                  <Copy size={16} color="currentColor" variant="Linear" />
+                  Copy
+                </button>
               </div>
+              <p className="mt-1 text-sm font-medium">{details.bank.account_name}</p>
 
-              {/* Modal Footer */}
-              <div className="p-6 bg-gray-50 rounded-b-3xl">
-                <div className="flex space-x-3">
-                  <button
-                    onClick={async () => {
-                      const result = await completeOrder();
-                      if (result.success) {
-                        window.location.href = '/checkout/success';
-                      }
-                      // If failed, stay on modal to allow retry
-                    }}
-                    disabled={isLoading}
-                    className="flex-1 bg-gradient-to-r from-green-600 to-blue-600 hover:from-green-700 hover:to-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold py-3 px-4 rounded-xl transition-all duration-300 transform hover:-translate-y-0.5 hover:shadow-lg">
-                    <span className="flex items-center justify-center">
-                      {isLoading ? (
-                        <div className="w-5 h-5 mr-2 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                      ) : (
-                        <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7"></path>
-                        </svg>
-                      )}
-                      {isLoading ? 'Confirming...' : 'Continue'}
-                    </span>
-                  </button>
-                  <button
-                    onClick={closeBankModal}
-                    className="px-6 py-3 bg-gray-300 hover:bg-gray-400 text-gray-700 font-semibold rounded-xl transition-all duration-300">
-                    Cancel
-                  </button>
-                </div>
+              <div className="mt-5 flex items-baseline justify-between border-t border-white/10 pt-4">
+                <span className="text-sm text-white/60">Amount to send</span>
+                <span className="text-xl font-extrabold tracking-tight tabular-nums">{formatPrice(cartTotal)}</span>
               </div>
             </div>
-          </div>
-        </div>
-      )}
 
-      {/* Loading Overlay */}
-      {isLoading && (
-        <div className="fixed inset-0 bg-white bg-opacity-75 flex items-center justify-center z-50">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-            <p className="text-gray-600">Processing your order...</p>
+            {/* What to do */}
+            <ol className="mt-5 space-y-3 text-sm">
+              {[
+                'Transfer the amount to the account above.',
+                `Put your order ID, ${generatedOrderId}, in the transfer description.`,
+                'Send your proof of payment on WhatsApp.',
+              ].map((step, index) => (
+                <li key={index} className="flex items-start gap-3">
+                  <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-gray-100 text-xs font-bold tabular-nums">
+                    {index + 1}
+                  </span>
+                  <span className="pt-0.5 text-gray-700">{step}</span>
+                </li>
+              ))}
+            </ol>
+
+            <div className="mt-6 grid grid-cols-1 gap-2">
+              <button
+                type="button"
+                onClick={async () => {
+                  const result = await completeOrder();
+                  if (result.success) {
+                    window.location.href = '/checkout/success';
+                  }
+                  // If failed, stay on modal to allow retry
+                }}
+                disabled={isLoading}
+                className="btn btn-lg btn-primary w-full"
+              >
+                {isLoading ? (
+                  <span className="size-5 animate-spin rounded-full border-2 border-white border-t-transparent [animation-duration:600ms]" aria-hidden="true" />
+                ) : (
+                  <TickCircle size={20} color="currentColor" variant="Linear" />
+                )}
+                {isLoading ? 'Confirming order' : 'Confirm order'}
+              </button>
+
+              <a href={whatsappProofUrl} target="_blank" rel="noopener noreferrer" className="btn btn-lg btn-outline w-full">
+                <Whatsapp size={20} color="currentColor" variant="Linear" />
+                Send proof on WhatsApp
+              </a>
+
+              <button
+                type="button"
+                onClick={() =>
+                  copyText(
+                    `Account Name: ${details.bank.account_name}\nBank: ${details.bank.bank_name}\nAccount Number: ${details.bank.account_number}`,
+                    'Account details copied'
+                  )
+                }
+                className="btn w-full text-gray-600 hover:text-ink"
+              >
+                <Copy size={16} color="currentColor" variant="Linear" />
+                Copy all account details
+              </button>
+            </div>
           </div>
         </div>
       )}

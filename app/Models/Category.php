@@ -4,41 +4,45 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Str;
 
 class Category extends Model
 {
     use HasFactory;
 
-    // Disable auto-incrementing since we're using custom IDs
-    public $incrementing = false;
+    // The murphylog categories table uses auto-increment ids. Keeping the key
+    // type as string means ids are still serialized as strings for the frontend.
+    public $incrementing = true;
 
-    // Set key type to string
     protected $keyType = 'string';
 
     protected $fillable = [
-        'id',
         'name',
     ];
 
-    // Generate MongoDB-like ObjectId
     protected static function boot()
     {
         parent::boot();
 
+        // slug is required and unique in the murphylog schema
         static::creating(function ($model) {
-            if (empty($model->id)) {
-                $model->id = self::generateObjectId();
+            if (empty($model->slug)) {
+                $model->slug = self::generateUniqueSlug($model->name);
             }
         });
     }
 
-    public static function generateObjectId()
+    public static function generateUniqueSlug($name)
     {
-        return sprintf('%08x%08x%08x',
-            time(),
-            mt_rand(0, 0xffffff),
-            mt_rand(0, 0xffffff)
-        );
+        $base = Str::slug($name);
+        $slug = $base;
+        $suffix = 2;
+
+        while (self::where('slug', $slug)->exists()) {
+            $slug = $base . '-' . $suffix++;
+        }
+
+        return $slug;
     }
 
     // Relationship with products

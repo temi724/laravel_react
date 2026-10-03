@@ -1,5 +1,0 @@
-User-agent: *
-Disallow:
-
-# Replace 'yourdomain.com' with your actual domain
-Sitemap: https://murphylog.com.ng/sitemap.xml

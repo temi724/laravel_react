@@ -1,12 +1,8 @@
-<x-layout>
-<div class="min-h-screen bg-gray-50 py-8">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div class="bg-white rounded-lg shadow-sm">
-            <!-- Cart Content -->
-            <div class="p-6">
-                @include('react.cart-page')
-            </div>
-        </div>
+{{-- Not a page for search results --}}
+<x-layout :title="\App\Support\Seo::title('Your cart')" robots="noindex, follow">
+
+    <div class="mx-auto max-w-[1440px] px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
+        {{-- Cart Content --}}
+        @include('react.cart-page')
     </div>
-</div>
 </x-layout>

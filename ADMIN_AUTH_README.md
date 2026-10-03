@@ -1,3 +1,8 @@
+> **Out of date (1 October 2026).** The `Admin-ID` header and `admin_id` parameter described below are no longer
+> accepted: anyone could send them. Admin routes now need the session cookie from `POST /api/admin/login` plus the
+> `X-CSRF-TOKEN` header, and sit behind the `web` and `admin.auth` middleware in `routes/api.php`.
+> Set an admin password with `php artisan admin:password you@example.com`.
+
 # Admin Authorization and Authentication for Product Management
 
 ## Overview

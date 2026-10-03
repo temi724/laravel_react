@@ -1,0 +1,326 @@
+/*
+ * Paper documents: the invoice and the in-store receipt.
+ *
+ * Every colour here is plain hex on purpose. The PDF export draws these elements with
+ * html2canvas, which cannot read the oklch colours in Tailwind's palette, so Tailwind
+ * colour utilities must not be used inside .doc. The sheet is 794px wide, which is A4
+ * at 96dpi, so what is on screen is what lands on the page.
+ */
+.doc {
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    width: 794px;
+    min-height: 1100px;
+    margin: 0 auto;
+    padding: 56px;
+    background: #ffffff;
+    color: #14171c;
+    font-family: 'Manrope Variable', ui-sans-serif, system-ui, sans-serif;
+    font-size: 14px;
+    line-height: 1.5;
+    text-align: left;
+}
+
+.doc *,
+.doc *::before,
+.doc *::after {
+    box-sizing: border-box;
+}
+
+/* Header: who it is from, and what it is */
+.doc-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 32px;
+}
+
+.doc-logo {
+    width: 52px;
+    height: 52px;
+    margin-bottom: 14px;
+    object-fit: contain;
+}
+
+.doc-brand-name {
+    font-size: 19px;
+    font-weight: 800;
+    line-height: 1.2;
+}
+
+.doc-brand-meta {
+    margin-top: 8px;
+    color: #5b6472;
+    font-size: 13px;
+    line-height: 1.6;
+}
+
+.doc-title {
+    flex-shrink: 0;
+    text-align: right;
+}
+
+.doc-kind {
+    font-size: 42px;
+    font-weight: 800;
+    line-height: 1.1;
+}
+
+/* The gap is generous on purpose: the browser PDF export draws the title a few pixels low */
+.doc-number {
+    margin-top: 20px;
+    font-size: 13px;
+    font-weight: 700;
+}
+
+.doc-date {
+    color: #5b6472;
+    font-size: 13px;
+}
+
+/* Customer and order facts */
+.doc-meta {
+    display: grid;
+    grid-template-columns: 1.3fr 1fr 1fr;
+    gap: 24px;
+    margin-top: 40px;
+    padding: 20px 24px;
+    border-radius: 16px;
+    background: #f5f6f8;
+}
+
+.doc-label {
+    color: #5b6472;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.doc-value {
+    margin-top: 3px;
+    font-weight: 700;
+    overflow-wrap: anywhere;
+}
+
+.doc-sub {
+    color: #5b6472;
+    font-size: 13px;
+    overflow-wrap: anywhere;
+}
+
+.doc-fact + .doc-fact {
+    margin-top: 12px;
+}
+
+.doc-pill {
+    display: inline-block;
+    margin-top: 4px;
+    padding: 5px 11px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 700;
+    line-height: 1.2;
+}
+
+.doc-pill-success {
+    background: #ecfdf3;
+    color: #067647;
+}
+
+.doc-pill-warning {
+    background: #fffaeb;
+    color: #b54708;
+}
+
+.doc-pill-danger {
+    background: #fef3f2;
+    color: #d92d20;
+}
+
+.doc-pill-neutral {
+    background: #e5e7eb;
+    color: #14171c;
+}
+
+/* Line items */
+.doc-items {
+    width: 100%;
+    margin-top: 36px;
+    border-collapse: collapse;
+}
+
+.doc-items th {
+    padding: 0 0 10px;
+    border-bottom: 1.5px solid #14171c;
+    color: #5b6472;
+    font-size: 12px;
+    font-weight: 600;
+    text-align: left;
+}
+
+.doc-items td {
+    padding: 14px 0;
+    border-bottom: 1px solid #e5e7eb;
+    vertical-align: top;
+}
+
+.doc-items .doc-num {
+    padding-left: 20px;
+    text-align: right;
+    white-space: nowrap;
+}
+
+.doc-item-name {
+    font-weight: 700;
+}
+
+.doc-item-note {
+    color: #5b6472;
+    font-size: 12px;
+}
+
+/* Serial numbers of the units sold. Long ones may break anywhere rather than push the prices out. */
+.doc-item-serial {
+    margin-top: 2px;
+    color: #14171c;
+    font-size: 12px;
+    font-weight: 600;
+    overflow-wrap: anywhere;
+}
+
+.doc-empty {
+    color: #5b6472;
+    text-align: center;
+}
+
+/* Totals on the right, payment details or notes on the left */
+.doc-summary {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 32px;
+    margin-top: 28px;
+}
+
+.doc-aside {
+    flex: 1;
+    max-width: 330px;
+}
+
+.doc-box {
+    padding: 16px 18px;
+    border-radius: 14px;
+    background: #f5f6f8;
+    font-size: 13px;
+}
+
+.doc-box + .doc-box {
+    margin-top: 12px;
+}
+
+.doc-box-title {
+    font-weight: 700;
+}
+
+.doc-account {
+    margin: 6px 0 4px;
+    font-size: 21px;
+    font-weight: 800;
+    line-height: 1.2;
+}
+
+.doc-totals {
+    flex-shrink: 0;
+    width: 270px;
+    margin-left: auto;
+}
+
+.doc-total-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 5px 0;
+}
+
+.doc-total-row span:first-child {
+    color: #5b6472;
+}
+
+.doc-total-row span:last-child {
+    font-weight: 600;
+}
+
+.doc-grand {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 16px;
+    margin-top: 10px;
+    padding-top: 14px;
+    border-top: 1.5px solid #14171c;
+    font-weight: 700;
+}
+
+.doc-grand strong {
+    font-size: 25px;
+    font-weight: 800;
+    line-height: 1.1;
+}
+
+/* Footer sits at the bottom of the page */
+.doc-foot {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 24px;
+    margin-top: auto;
+    padding-top: 20px;
+    border-top: 1px solid #e5e7eb;
+    color: #5b6472;
+    font-size: 12px;
+}
+
+.doc-foot-spacer {
+    flex: 1;
+    min-height: 40px;
+}
+
+.doc-thanks {
+    color: #14171c;
+    font-size: 14px;
+    font-weight: 700;
+}
+
+/*
+ * Printing a document: printDocument() in resources/js/lib/pdf.js puts a copy of the sheet
+ * straight under <body>, and these rules print that copy and nothing else.
+ */
+.doc-print-root {
+    display: none;
+}
+
+@media print {
+    @page {
+        size: A4;
+        margin: 0;
+    }
+
+    body.printing-document {
+        margin: 0 !important;
+        background: #ffffff !important;
+    }
+
+    body.printing-document > *:not(.doc-print-root) {
+        display: none !important;
+    }
+
+    body.printing-document > .doc-print-root {
+        display: block;
+    }
+
+    body.printing-document .doc {
+        margin: 0;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+    }
+}

@@ -2,8 +2,11 @@
 
 namespace App\Models;
 
+use App\Enums\AdminPermission;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Support\Facades\Hash;
 
 /**
@@ -58,14 +61,16 @@ class Admin extends Model
 {
     use HasFactory;
 
-    // Disable auto-incrementing since we're using custom IDs
-    public $incrementing = false;
+    // Admins are the murphylog users whose role is 'admin'
+    protected $table = 'users';
 
-    // Set key type to string
+    // The users table uses auto-increment ids. Keeping the key type as string
+    // means ids are still serialized as strings for the frontend.
+    public $incrementing = true;
+
     protected $keyType = 'string';
 
     protected $fillable = [
-        'id',
         'name',
         'email',
         'password',
@@ -74,31 +79,76 @@ class Admin extends Model
 
     protected $hidden = [
         'password',
+        'remember_token',
+        'phone',
     ];
 
     protected $casts = [
         'password' => 'hashed',
+        'is_active' => 'boolean',
+        'last_login_at' => 'datetime',
     ];
 
-    // Generate MongoDB-like ObjectId
+    protected $appends = ['phone_number'];
+
     protected static function boot()
     {
         parent::boot();
 
+        static::addGlobalScope('admin', function (Builder $query) {
+            $query->where('role', 'admin');
+        });
+
         static::creating(function ($model) {
-            if (empty($model->id)) {
-                $model->id = self::generateObjectId();
-            }
+            $model->role = 'admin';
         });
     }
 
-    public static function generateObjectId()
+    // phone_number <-> phone
+    public function getPhoneNumberAttribute()
     {
-        return sprintf('%08x%08x%08x',
-            time(),
-            mt_rand(0, 0xffffff),
-            mt_rand(0, 0xffffff)
-        );
+        return $this->attributes['phone'] ?? null;
+    }
+
+    public function setPhoneNumberAttribute($value)
+    {
+        $this->attributes['phone'] = $value;
+    }
+
+    // Role and permissions (admin_profiles). An admin from before permissions existed has no row.
+    public function profile(): HasOne
+    {
+        return $this->hasOne(AdminProfile::class, 'user_id');
+    }
+
+    /**
+     * The super admin manages the other admins and can do everything.
+     */
+    public function isSuperAdmin(): bool
+    {
+        return (bool) $this->profile?->is_super;
+    }
+
+    /**
+     * The permissions this admin has.
+     *
+     * @return list<string>
+     */
+    public function permissions(): array
+    {
+        // A super admin has them all, and so does an admin who predates permissions
+        if ($this->isSuperAdmin() || $this->profile === null) {
+            return AdminPermission::values();
+        }
+
+        return array_values(array_intersect(AdminPermission::values(), $this->profile->permissions ?? []));
+    }
+
+    public function canDo(AdminPermission|string $permission): bool
+    {
+        $value = $permission instanceof AdminPermission ? $permission->value : $permission;
+
+        return in_array($value, $this->permissions(), true);
     }
 
     /**

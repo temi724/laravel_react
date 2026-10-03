@@ -5,7 +5,7 @@
 @section('page-description', 'Manage your product inventory and details')
 
 @section('content')
-    <div class="p-6">
+    <div>
         {{-- React AdminProductManager Component --}}
         <div
             data-react-component="AdminProductManager"

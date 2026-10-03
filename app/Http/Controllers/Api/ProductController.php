@@ -62,74 +62,27 @@ class ProductController extends Controller
             'sort_direction' => 'nullable|string|in:asc,desc'
         ]);
 
-        // Get products
-        $productQuery = Product::with('category');
-        // Get deals
-        $dealQuery = \App\Models\Deal::with('category');
-
-        // Apply filters to both queries
-        if ($request->has('category_id') && $request->get('category_id')) {
-            $productQuery->where('category_id', $request->get('category_id'));
-            $dealQuery->where('category_id', $request->get('category_id'));
+        $filters = array_filter([
+            'category_id' => $request->get('category_id'),
+            'status' => $request->get('status'),
+        ]);
+        foreach (['min_price', 'max_price'] as $key) {
+            if ($request->has($key)) {
+                $filters[$key] = $request->get($key);
+            }
         }
-
-        if ($request->has('min_price')) {
-            $productQuery->where('price', '>=', $request->get('min_price'));
-            $dealQuery->where('price', '>=', $request->get('min_price'));
-        }
-
-        if ($request->has('max_price')) {
-            $productQuery->where('price', '<=', $request->get('max_price'));
-            $dealQuery->where('price', '<=', $request->get('max_price'));
-        }
-
-        if ($request->has('status') && $request->get('status')) {
-            $productQuery->where('product_status', $request->get('status'));
-            $dealQuery->where('product_status', $request->get('status'));
-        }
-
         if ($request->has('in_stock')) {
-            $productQuery->where('in_stock', $request->boolean('in_stock'));
-            $dealQuery->where('in_stock', $request->boolean('in_stock'));
+            $filters['in_stock'] = $request->boolean('in_stock');
         }
 
-        // Get all products and deals
-        $products = $productQuery->get()->map(function ($product) {
-            $product->type = 'product';
-            return $product;
-        });
-
-        $deals = $dealQuery->get()->map(function ($deal) {
-            $deal->type = 'deal';
-            return $deal;
-        });
-
-        // Combine and sort
-        $combined = $products->concat($deals);
-
-        // Apply sorting
-        $sortBy = $request->get('sort_by', 'created_at');
-        $sortDirection = $request->get('sort_direction', 'desc');
-
-        $combined = $combined->sortBy($sortBy, SORT_REGULAR, $sortDirection === 'desc');
-
-        // Manual pagination
-        $perPage = min($request->get('per_page', 15), 100);
-        $page = $request->get('page', 1);
-        $total = $combined->count();
-        $items = $combined->forPage($page, $perPage)->values();
-
-        $results = [
-            'data' => $items,
-            'current_page' => $page,
-            'last_page' => ceil($total / $perPage),
-            'per_page' => $perPage,
-            'total' => $total,
-            'from' => ($page - 1) * $perPage + 1,
-            'to' => min($page * $perPage, $total)
-        ];
-
-        return response()->json($results);
+        // Products and deals together, the same listing the pages print (App\Services\Catalog)
+        return response()->json(app(\App\Services\Catalog::class)->page(
+            $filters,
+            (int) $request->get('page', 1),
+            (int) $request->get('per_page', 15),
+            (string) $request->get('sort_by', 'created_at'),
+            (string) $request->get('sort_direction', 'desc'),
+        ));
     }
 
     /**
@@ -168,7 +121,7 @@ class ProductController extends Controller
     {
         $validated = $request->validate([
             'product_name' => 'required|string',
-            'category_id' => 'nullable|string|exists:categories,id',
+            'category_id' => 'required|string|exists:categories,id',
             'price' => 'required|numeric',
             'overview' => 'nullable|string',
             'description' => 'nullable|string',
@@ -183,10 +136,11 @@ class ProductController extends Controller
             'in_stock' => 'boolean'
         ]);
 
-        $product = Product::create($validated);
-
-        // Log the admin who created the product
+        // The admin listing the product is saved with it
         $admin = $request->get('authenticated_admin');
+        $product = (new Product($validated))->listedBy($admin);
+        $product->save();
+
         Log::info('Product created by admin: ' . $admin->name . ' (ID: ' . $admin->id . ')');
 
         return response()->json([
@@ -301,7 +255,7 @@ class ProductController extends Controller
 
         $validated = $request->validate([
             'product_name' => 'sometimes|string',
-            'category_id' => 'sometimes|nullable|string|exists:categories,id',
+            'category_id' => 'sometimes|required|string|exists:categories,id',
             'price' => 'sometimes|numeric',
             'overview' => 'nullable|string',
             'description' => 'nullable|string',
@@ -469,6 +423,7 @@ class ProductController extends Controller
             'min_price' => 'nullable|numeric|min:0',
             'max_price' => 'nullable|numeric|min:0',
             'in_stock' => 'nullable|boolean',
+            'status' => 'nullable|string|in:new,uk_used,refurbished',
             'page' => 'nullable|integer|min:1',
             'per_page' => 'nullable|integer|min:1|max:100'
         ]);
@@ -492,12 +447,7 @@ class ProductController extends Controller
 
         // Search products with improved relevance scoring
         $productQuery = Product::query();
-        $productQuery->where(function ($q) use ($searchTerm) {
-            $q->where('product_name', 'LIKE', "%{$searchTerm}%")
-              ->orWhere('description', 'LIKE', "%{$searchTerm}%")
-              ->orWhere('overview', 'LIKE', "%{$searchTerm}%")
-              ->orWhere('about', 'LIKE', "%{$searchTerm}%");
-        });
+        $productQuery->search($searchTerm);
 
         // Search deals with improved relevance scoring
         $dealQuery = \App\Models\Deal::query();
@@ -525,8 +475,13 @@ class ProductController extends Controller
         }
 
         if ($request->has('in_stock')) {
-            $productQuery->where('in_stock', $request->boolean('in_stock'));
+            $productQuery->inStock($request->boolean('in_stock'));
             $dealQuery->where('in_stock', $request->boolean('in_stock'));
+        }
+
+        if ($request->filled('status')) {
+            $productQuery->productStatus($request->get('status'));
+            $dealQuery->where('product_status', $request->get('status'));
         }
 
         // Get results and calculate relevance scores in PHP
@@ -656,8 +611,8 @@ class ProductController extends Controller
         return cache()->remember($cacheKey, 900, function () use ($request, $categoryId, $perPage, $exclude, $limit) {
             $query = Product::with('category')->byCategory($categoryId)->latest();
 
-            // Exclude specific product if provided
-            if ($exclude) {
+            // Exclude specific product if provided (product ids are numeric, deal ids are not)
+            if ($exclude && ctype_digit((string) $exclude)) {
                 $query->where('id', '!=', $exclude);
             }
 
@@ -742,14 +697,16 @@ class ProductController extends Controller
         ]);
 
         // Get top 5 product suggestions
-        $products = Product::where('product_name', 'LIKE', '%' . $query . '%')
+        $products = Product::where('name', 'LIKE', '%' . $query . '%')
             ->limit(5)
-            ->get(['id', 'product_name', 'price'])
+            ->get(['id', 'name', 'price', 'images'])
             ->map(function ($product) {
                 return [
                     'id' => $product->id,
                     'name' => $product->product_name,
                     'price' => $product->price,
+                    'image' => $product->images_url[0] ?? null,
+                    'url' => $product->url,
                     'type' => 'product'
                 ];
             });
@@ -757,12 +714,14 @@ class ProductController extends Controller
         // Get top 5 deal suggestions
         $deals = \App\Models\Deal::where('product_name', 'LIKE', '%' . $query . '%')
             ->limit(5)
-            ->get(['id', 'product_name', 'price'])
+            ->get(['id', 'product_name', 'price', 'images_url'])
             ->map(function ($deal) {
                 return [
                     'id' => $deal->id,
                     'name' => $deal->product_name,
                     'price' => $deal->price,
+                    'image' => $deal->images_url[0] ?? null,
+                    'url' => $deal->url,
                     'type' => 'deal'
                 ];
             });

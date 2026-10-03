@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import axios from 'axios';
+import { showToast } from '../lib/toast';
 
 const useCartStore = create(
   persist(
@@ -54,22 +55,14 @@ const useCartStore = create(
           }
 
           const currentCart = get().cartItems;
-          console.log('Current cart before adding:', currentCart);
-          console.log('Looking for existing item with:', { itemId, selectedStorage, selectedColor });
-          const existingItemIndex = currentCart.findIndex(item => {
-            const match = item.id === itemId &&
+          // The same thing again: same item, same kind (a product and a bundle can share an id), same options
+          const existingItemIndex = currentCart.findIndex(
+            (item) =>
+              item.id === itemId &&
+              (item.type || 'product') === type &&
               item.selected_storage === selectedStorage &&
-              item.selected_color === selectedColor;
-            console.log('Comparing item:', {
-              itemId: item.id,
-              selectedStorage: item.selected_storage,
-              selectedColor: item.selected_color,
-              matches: match
-            });
-            return match;
-          });
-
-          console.log('Existing item index found:', existingItemIndex);
+              item.selected_color === selectedColor
+          );
 
           let updatedCart;
           const price = storagePrice || parseFloat(product.price);
@@ -78,9 +71,10 @@ const useCartStore = create(
           if (existingItemIndex >= 0) {
             console.log('Updating existing item at index:', existingItemIndex);
             // Update existing item
-            updatedCart = [...currentCart];
-            updatedCart[existingItemIndex].quantity += quantity;
-            updatedCart[existingItemIndex].subtotal = updatedCart[existingItemIndex].quantity * price;
+            // The price may have changed since it was first added (an offer started or ended): the line takes the current one
+            updatedCart = currentCart.map((item, index) =>
+              index === existingItemIndex ? { ...item, price, quantity: item.quantity + quantity, subtotal: (item.quantity + quantity) * price } : item
+            );
           } else {
             console.log('Adding new item to cart');
             // Add new item
@@ -97,6 +91,9 @@ const useCartStore = create(
               selected_storage: selectedStorage,
               storage_price: storagePrice,
               selected_color: selectedColor,
+              // Bundles link to their own page and say what is inside them
+              url: product.url || null,
+              note: product.note || null,
             };
             console.log('New item created:', newItem);
             updatedCart = [...currentCart, newItem];
@@ -214,29 +211,7 @@ const useCartStore = create(
       toggleCart: () => set((state) => ({ isOpen: !state.isOpen })),
 
       // Toast functionality
-      showToast: (message, type = 'success') => {
-        // Create and show toast notification
-        const toast = document.createElement('div');
-        toast.className = `fixed top-4 right-4 z-50 px-4 py-2 rounded-md text-white font-medium transition-all duration-300 transform translate-x-full ${
-          type === 'error' ? 'bg-red-500' : 'bg-green-500'
-        }`;
-        toast.textContent = message;
-
-        document.body.appendChild(toast);
-
-        // Animate in
-        setTimeout(() => {
-          toast.classList.remove('translate-x-full');
-        }, 10);
-
-        // Animate out and remove
-        setTimeout(() => {
-          toast.classList.add('translate-x-full');
-          setTimeout(() => {
-            document.body.removeChild(toast);
-          }, 300);
-        }, 3000);
-      },
+      showToast: (message, type = 'success') => showToast(message, type),
 
       increaseQuantity: (itemId) => {
         const item = get().cartItems.find(item => item.id == itemId);

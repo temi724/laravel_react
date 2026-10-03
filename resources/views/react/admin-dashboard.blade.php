@@ -5,7 +5,7 @@
 @section('page-description', 'Overview of your application performance')
 
 @section('content')
-    <div class="p-6">
+    <div>
         {{-- React AdminDashboard Component --}}
         <div data-react-component="AdminDashboard"></div>
     </div>

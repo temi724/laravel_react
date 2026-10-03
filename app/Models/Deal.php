@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Support\ProductUrls;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
@@ -69,7 +70,7 @@ class Deal extends Model
         'in_stock' => 'boolean',
     ];
 
-    protected $appends = ['storage_options', 'display_price', 'default_storage'];
+    protected $appends = ['storage_options', 'display_price', 'default_storage', 'url'];
 
     // Generate MongoDB-like ObjectId
     protected static function boot()
@@ -81,6 +82,15 @@ class Deal extends Model
                 $model->id = self::generateObjectId();
             }
         });
+
+        // The page address follows the name; the address it had before becomes a redirect
+        static::saved(function ($model) {
+            cache()->forget("product.show.{$model->id}");
+            if ($model->wasRecentlyCreated || $model->wasChanged('product_name')) {
+                ProductUrls::shared()->sync($model);
+            }
+        });
+        static::deleted(fn ($model) => ProductUrls::shared()->release($model));
     }
 
     public static function generateObjectId()
@@ -90,6 +100,12 @@ class Deal extends Model
             mt_rand(0, 0xffffff),
             mt_rand(0, 0xffffff)
         );
+    }
+
+    // The deal's page on the storefront, with the slug the route expects
+    public function getUrlAttribute(): string
+    {
+        return \App\Support\Seo::productPath($this);
     }
 
     // Get storage options with pricing

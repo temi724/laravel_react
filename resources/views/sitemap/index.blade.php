@@ -1,52 +1,41 @@
 <?php echo '<?xml version="1.0" encoding="UTF-8"?>'; ?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
-        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-        xsi:schemaLocation="http://www.sitemaps.org/schemas/sitemap/0.9
-        http://www.sitemaps.org/schemas/sitemap/0.9/sitemap.xsd">
 
-    <!-- Homepage -->
+{{-- Every page worth finding in search: the home page, the listings, the shop page, each
+     category with products in it, each bundle and each product with its first photo.
+     Cart, checkout and search results are left out on purpose. (StorePageController@sitemap) --}}
+@php use App\Support\Seo; @endphp
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">
     <url>
-        <loc>{{ url('/') }}</loc>
-        <lastmod>{{ now()->format('Y-m-d') }}</lastmod>
-        <changefreq>daily</changefreq>
-        <priority>1.0</priority>
+        <loc>{{ Seo::url('/') }}</loc>
+        @if($latest)<lastmod>{{ $latest->toDateString() }}</lastmod>@endif
     </url>
-
-    <!-- Search Page -->
     <url>
-        <loc>{{ url('/search') }}</loc>
-        <lastmod>{{ now()->format('Y-m-d') }}</lastmod>
-        <changefreq>weekly</changefreq>
-        <priority>0.8</priority>
+        <loc>{{ Seo::url('/products') }}</loc>
+        @if($latest)<lastmod>{{ $latest->toDateString() }}</lastmod>@endif
     </url>
-
-
-    <!-- Checkout Page -->
     <url>
-        <loc>{{ url('/checkout') }}</loc>
-        <lastmod>{{ now()->format('Y-m-d') }}</lastmod>
-        <changefreq>monthly</changefreq>
-        <priority>0.5</priority>
+        <loc>{{ Seo::url('/about') }}</loc>
     </url>
-
-
-
-    <!-- Products -->
-    @foreach($products as $product)
-    <url>
-        <loc>{{ url('/product/' . $product->id . '/' . \Illuminate\Support\Str::slug($product->product_name)) }}</loc>
-        <lastmod>{{ $product->updated_at->format('Y-m-d') }}</lastmod>
-        <changefreq>weekly</changefreq>
-        <priority>0.9</priority>
-    </url>
-    @endforeach
-
-    <!-- Categories -->
     @foreach($categories as $category)
     <url>
-        <loc>{{ url('/search?category_id=' . $category->id) }}</loc>
-        <lastmod>{{ $category->updated_at->format('Y-m-d') }}</lastmod>
-        <changefreq>weekly</changefreq>
-        <priority>0.7</priority>
+        <loc>{{ Seo::url(Seo::categoryPath($category)) }}</loc>
     </url>
     @endforeach
+    @foreach($bundles as $bundle)
+    <url>
+        <loc>{{ Seo::url('/bundle/'.$bundle->slug) }}</loc>
+        @if($bundle->updated_at)<lastmod>{{ $bundle->updated_at->toDateString() }}</lastmod>@endif
+    </url>
+    @endforeach
+    @foreach($products as $product)
+    <url>
+        <loc>{{ Seo::url(Seo::productPath($product)) }}</loc>
+        @if($product->updated_at)<lastmod>{{ $product->updated_at->toDateString() }}</lastmod>@endif
+        @if($image = Seo::image($product->images_url[0] ?? null))
+        <image:image>
+            <image:loc>{{ $image }}</image:loc>
+        </image:image>
+        @endif
+    </url>
+    @endforeach
+</urlset>

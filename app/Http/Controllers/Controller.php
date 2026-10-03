@@ -22,9 +22,9 @@ namespace App\Http\Controllers;
  * @OA\SecurityScheme(
  *     securityScheme="AdminAuth",
  *     type="apiKey",
- *     in="header",
- *     name="Admin-ID",
- *     description="Admin ID for authentication (required for create, update, delete operations)"
+ *     in="cookie",
+ *     name="laravel-session",
+ *     description="The session cookie set by POST /admin/login. Create, update and delete operations need a signed-in admin and the X-CSRF-TOKEN header."
  * )
  */
 abstract class Controller

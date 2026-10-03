@@ -6,9 +6,13 @@ const useProductStore = create((set, get) => ({
   products: [],
   totalProducts: 0,
   currentPage: 1,
-  perPage: 12,
+  // 30 fills whole rows at 2, 3, 5 and 6 columns
+  perPage: 30,
   hasMore: true,
   isLoading: false,
+  loadError: false,
+  // True while the products shown are the ones the page was served with
+  seeded: false,
 
   // Filters
   sortBy: 'created_at',
@@ -66,7 +70,7 @@ const useProductStore = create((set, get) => ({
 
     if (state.isLoading) return;
 
-    set({ isLoading: true });
+    set({ isLoading: true, loadError: false });
 
     try {
       const params = {
@@ -103,6 +107,7 @@ const useProductStore = create((set, get) => ({
       const newProducts = response.data.data;
 
       set({
+        seeded: false,
         products: loadMore ? [...state.products, ...newProducts] : newProducts,
         totalProducts: response.data.total,
         currentPage: response.data.current_page,
@@ -110,6 +115,7 @@ const useProductStore = create((set, get) => ({
       });
     } catch (error) {
       console.error('Error loading products:', error);
+      set({ loadError: true });
     } finally {
       set({ isLoading: false });
     }
@@ -163,18 +169,29 @@ const useProductStore = create((set, get) => ({
     get().loadProducts();
   },
 
+  // Start from the page of products the server printed in the HTML, instead of asking for it
+  // again. `seeded` stays true until the grid loads something itself.
+  seed: (listing, { categoryId = '' } = {}) => {
+    set({
+      products: listing.data,
+      totalProducts: listing.total,
+      currentPage: Number(listing.current_page) || 1,
+      perPage: Number(listing.per_page) || get().perPage,
+      hasMore: Number(listing.current_page) < Number(listing.last_page),
+      selectedCategory: categoryId,
+      searchQuery: '',
+      seeded: true,
+    });
+  },
+
   // Initialize store
   initialize: (initialData = {}) => {
-    console.log('🔍 ProductStore initialize called with:', initialData);
     set({
       searchQuery: initialData.searchQuery || '',
       selectedCategory: initialData.categoryId || '',
     });
-    console.log('🔍 ProductStore state after initialize:', {
-      searchQuery: initialData.searchQuery || '',
-      selectedCategory: initialData.categoryId || ''
-    });
-    get().loadProducts();
+    // A seeded grid already has its first page
+    if (!initialData.seeded) get().loadProducts();
   },
 }));
 

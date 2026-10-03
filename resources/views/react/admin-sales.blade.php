@@ -5,7 +5,7 @@
 @section('page-description', 'Track and manage customer orders and sales')
 
 @section('content')
-    <div class="p-6">
+    <div>
         {{-- React AdminSalesManager Component --}}
         <div data-react-component="AdminSalesManager"></div>
     </div>

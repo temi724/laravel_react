@@ -1,17 +1,8 @@
-<x-layout>
-<div class="min-h-screen bg-gray-50 py-8">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div class="bg-white rounded-lg shadow-sm">
-            <!-- Header -->
-            <div class="px-6 py-4 border-b border-gray-200">
-                <h1 class="text-2xl font-bold text-gray-900">Checkout</h1>
-            </div>
+{{-- Not a page for search results --}}
+<x-layout :title="\App\Support\Seo::title('Checkout')" robots="noindex, follow">
 
-            <!-- Checkout Content -->
-            <div class="p-6">
-                @include('react.checkout-page')
-            </div>
-        </div>
+    <div class="mx-auto max-w-[1440px] px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
+        {{-- Checkout Content --}}
+        @include('react.checkout-page')
     </div>
-</div>
 </x-layout>

@@ -11,6 +11,7 @@ console.log('✅ useCartStore imported');
 
 // Try importing one component to test
 import ProductGrid from './components/ProductGrid.jsx';
+import ProductRail from './components/ProductRail.jsx';
 console.log('✅ ProductGrid imported');
 
 // Import other essential components
@@ -32,6 +33,12 @@ console.log('✅ Cart imported');
 
 // Import checkout component
 import CheckoutPage from './components/CheckoutPage.jsx';
+
+// Offers: the deal of the day, drops and bundles
+import DealOfTheDay from './components/DealOfTheDay.jsx';
+import DropsRail from './components/DropsRail.jsx';
+import BundleRail from './components/BundleRail.jsx';
+import BundleShow from './components/BundleShow.jsx';
 console.log('✅ CheckoutPage imported');
 
 // Import lazy-loaded admin components
@@ -40,7 +47,10 @@ import {
     LazyAdminLogin,
     LazyAdminProductManager,
     LazyAdminSalesManager,
-    LazyAdminOrderManager
+    LazyAdminOrderManager,
+    LazyAdminCategories,
+    LazyAdminSettings,
+    LazyAdminOffers
 } from './components/admin/LazyAdminComponents.jsx';
 console.log('✅ Lazy admin components imported');
 
@@ -49,17 +59,25 @@ console.log('React.jsx: Starting React initialization');
 // Component registry
 const components = {
   ProductGrid,
+  ProductRail,
   SearchBar,
   ProductShow,
   CartPage,
   CartCounter,
   Cart,
   CheckoutPage,
+  DealOfTheDay,
+  DropsRail,
+  BundleRail,
+  BundleShow,
   AdminDashboard: LazyAdminDashboard,
   AdminLogin: LazyAdminLogin,
   AdminProductManager: LazyAdminProductManager,
   AdminSalesManager: LazyAdminSalesManager,
   AdminOrderManager: LazyAdminOrderManager,
+  AdminCategories: LazyAdminCategories,
+  AdminSettings: LazyAdminSettings,
+  AdminOffers: LazyAdminOffers,
 };
 
 console.log('✅ Component registry created:', Object.keys(components));

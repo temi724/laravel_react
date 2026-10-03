@@ -1,386 +1,289 @@
-<x-layout>
-    <x-slot name="title">Murphylog global</x-slot>
+@php
+    use App\Support\Seo;
 
-<!-- Hero Carousel Section -->
-<section class="relative overflow-hidden">
-    <div class="hero-carousel relative h-[70vh] min-h-[500px]">
-        <!-- Slide 1 -->
-        <div class="slide active" style="background-image: url('{{ asset('images/store.jpg') }}');">
-            <div class="absolute inset-0 bg-gradient-to-r from-blue-900/80 via-purple-900/80 to-blue-900/80"></div>
-            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-full flex items-center relative z-10 text-white">
-                <div class="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center w-full">
-                    <div>
-                        <h1 class="text-4xl lg:text-6xl font-bold mb-6">
-                            Need a Gadget?<br>
-                            <span class="bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
-                                Check Out Our List!
-                            </span>
-                        </h1>
-                        <p class="text-xl text-blue-100 mb-8 max-w-md">
-                            Discover our collection of affordable gadgets, smartphones, laptops, and cutting-edge tech. Quality meets affordability!
-                        </p>
-                        <div class="flex flex-col sm:flex-row gap-4">
-                            <a href="#products" class="bg-white text-blue-900 px-8 py-3 rounded-lg font-semibold hover:bg-blue-50 transition text-center">
-                                Shop Now
-                            </a>
-                            <a href="#deals" class="border-2 border-white text-white px-8 py-3 rounded-lg font-semibold hover:bg-white hover:text-blue-900 transition text-center">
-                                View Deals
-                            </a>
-                        </div>
-                    </div>
-                    <div class="relative">
-                        <div class="bg-white/20 backdrop-blur-sm rounded-2xl p-8 border border-white/20">
-                            <div class="space-y-6">
-                                <div class="flex items-center space-x-4">
-                                    <div class="w-12 h-12 bg-blue-400 rounded-lg flex items-center justify-center">
-                                        <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"></path>
-                                        </svg>
-                                    </div>
-                                    <div>
-                                        <div class="font-semibold">Latest Smartphones</div>
-                                        <div class="text-blue-200 text-sm">From ₦100,000</div>
-                                    </div>
-                                </div>
-                                <div class="flex items-center space-x-4">
-                                    <div class="w-12 h-12 bg-purple-400 rounded-lg flex items-center justify-center">
-                                        <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
-                                        </svg>
-                                    </div>
-                                    <div>
-                                        <div class="font-semibold">Gaming Laptops</div>
-                                        <div class="text-blue-200 text-sm">Up to 50% Off</div>
-                                    </div>
-                                </div>
-                                <div class="flex items-center space-x-4">
-                                    <div class="w-12 h-12 bg-green-400 rounded-lg flex items-center justify-center">
-                                        <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536M9 11V9a3 3 0 116 0v2m-3 9a7 7 0 100-14 7 7 0 000 14z"></path>
-                                        </svg>
-                                    </div>
-                                    <div>
-                                        <div class="font-semibold">Smart Home</div>
-                                        <div class="text-blue-200 text-sm">Free Installation</div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
+    $rotatingWords = ['laptop', 'phone', 'tablet', 'console', 'headset'];
+@endphp
 
-        <!-- Slide 2 -->
-        <div class="slide" style="background-image: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
-            <div class="absolute inset-0 bg-black/30"></div>
-            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-full flex items-center relative z-10 text-white">
-                <div class="text-center w-full">
-                    <h1 class="text-5xl lg:text-7xl font-bold mb-6">
-                        <span class="bg-gradient-to-r from-yellow-400 to-orange-500 bg-clip-text text-transparent">
-                            Flash Deals
-                        </span>
-                    </h1>
-                    <p class="text-xl text-gray-200 mb-8 max-w-2xl mx-auto">
-                        Limited time offers on premium gadgets. Save big on the latest technology!
-                    </p>
-                    <div class="flex flex-col sm:flex-row gap-4 justify-center">
-                        <a href="#deals" class="bg-orange-500 text-white px-8 py-3 rounded-lg font-semibold hover:bg-orange-600 transition text-center">
-                            View Flash Deals
-                        </a>
-                        <a href="#products" class="border-2 border-white text-white px-8 py-3 rounded-lg font-semibold hover:bg-white hover:text-orange-500 transition text-center">
-                            Browse Products
-                        </a>
-                    </div>
-                </div>
-            </div>
-        </div>
+{{-- The home page names the shop to search engines: who it is, where it is and what it lists --}}
+<x-layout
+    :canonical="Seo::url('/')"
+    :image="Seo::defaultImage() ?? Seo::image($showcase->first()?->images_url[0] ?? null)"
+    :schema="[Seo::store(), Seo::website(), Seo::itemList($listing['data'], 'Products at '.Seo::storeName())]"
+>
 
-        <!-- Slide 3 -->
-        <div class="slide" style="background-image: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);">
-            <div class="absolute inset-0 bg-black/30"></div>
-            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-full flex items-center relative z-10 text-white">
-                <div class="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center w-full">
-                    <div>
-                        <h1 class="text-4xl lg:text-6xl font-bold mb-6">
-                            Premium<br>
-                            <span class="bg-gradient-to-r from-pink-400 to-red-400 bg-clip-text text-transparent">
-                                Accessories
-                            </span>
-                        </h1>
-                        <p class="text-xl text-gray-200 mb-8 max-w-md">
-                            Complete your tech setup with our premium accessories collection.
-                        </p>
-                        <a href="#products" class="bg-white text-pink-600 px-8 py-3 rounded-lg font-semibold hover:bg-gray-50 transition text-center inline-block">
-                            Explore Accessories
-                        </a>
-                    </div>
-                    <div class="text-center">
-                        <div class="bg-white/20 backdrop-blur-sm rounded-2xl p-8 border border-white/20 inline-block">
-                            <svg class="w-24 h-24 text-white mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 100 4m0-4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 100 4m0-4v2m0-6V4"></path>
-                            </svg>
-                            <h3 class="text-2xl font-bold mb-2">Premium Quality</h3>
-                            <p class="text-gray-300">Trusted by thousands</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
+    {{-- Hero: one message on the left, the newest products on the right --}}
+    <section class="bg-ink text-white">
+        <div class="mx-auto grid max-w-[1440px] grid-cols-1 items-center gap-8 px-4 pt-8 pb-10 sm:px-6 lg:grid-cols-[1.05fr_1fr] lg:gap-14 lg:px-8 lg:pt-12 lg:pb-14">
+            <div>
+                <h1 class="text-4xl leading-[1.05] font-extrabold tracking-tight sm:text-5xl lg:text-6xl">
+                    Find your next
+                    {{-- The word changes every few seconds to show the range. It stays on the first word when motion is reduced. --}}
+                    <span
+                        class="relative block text-brand-soft"
+                        x-data="{ current: 0, total: {{ count($rotatingWords) }} }"
+                        x-init="if (! window.matchMedia('(prefers-reduced-motion: reduce)').matches) { setInterval(() => current = (current + 1) % total, 2600) }"
+                    >
+                        @foreach($rotatingWords as $index => $word)
+                            <span
+                                x-show="current === {{ $index }}"
+                                x-transition:enter="transition-[opacity,transform] duration-500 ease-out"
+                                x-transition:enter-start="translate-y-3 opacity-0"
+                                x-transition:enter-end="translate-y-0 opacity-100"
+                                x-transition:leave="absolute inset-x-0 top-0 transition-[opacity,transform] duration-300 ease-out"
+                                x-transition:leave-start="translate-y-0 opacity-100"
+                                x-transition:leave-end="-translate-y-3 opacity-0"
+                                class="block capitalize"
+                                @if($index > 0) x-cloak @endif
+                            >{{ $word }}</span>
+                        @endforeach
+                    </span>
+                </h1>
 
-    <!-- Navigation Arrows -->
-    <button class="carousel-prev absolute left-4 top-1/2 transform -translate-y-1/2 z-20 bg-white/20 backdrop-blur-sm text-white p-3 rounded-full hover:bg-white/30 transition">
-        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
-        </svg>
-    </button>
-    <button class="carousel-next absolute right-4 top-1/2 transform -translate-y-1/2 z-20 bg-white/20 backdrop-blur-sm text-white p-3 rounded-full hover:bg-white/30 transition">
-        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
-        </svg>
-    </button>
+                <p class="mt-5 max-w-[46ch] text-base leading-relaxed text-white/70 sm:text-lg">
+                    Brand new and UK used devices at fair prices. Pick up in Ikeja or get delivery anywhere in Nigeria.
+                </p>
 
-    <!-- Indicators -->
-    <div class="carousel-indicators absolute bottom-8 left-1/2 transform -translate-x-1/2 z-20 flex space-x-3">
-        <button class="indicator active w-3 h-3 bg-white rounded-full opacity-50 hover:opacity-100 transition"></button>
-        <button class="indicator w-3 h-3 bg-white rounded-full opacity-50 hover:opacity-100 transition"></button>
-        <button class="indicator w-3 h-3 bg-white rounded-full opacity-50 hover:opacity-100 transition"></button>
-    </div>
-</section>
-
-<style>
-.hero-carousel {
-    position: relative;
-}
-
-.hero-carousel .slide {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background-size: cover;
-    background-position: center;
-    opacity: 0;
-    transition: opacity 0.5s ease-in-out;
-    display: flex;
-    align-items: center;
-}
-
-.hero-carousel .slide.active {
-    opacity: 1;
-}
-
-.hero-carousel .slide::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: rgba(0, 0, 0, 0.3);
-}
-
-.carousel-prev, .carousel-next {
-    display: none;
-}
-
-@media (min-width: 768px) {
-    .carousel-prev, .carousel-next {
-        display: block;
-    }
-}
-
-.carousel-indicators .indicator.active {
-    opacity: 1 !important;
-}
-</style>
-
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    const carousel = document.querySelector('.hero-carousel');
-    const slides = document.querySelectorAll('.slide');
-    const indicators = document.querySelectorAll('.indicator');
-    const prevBtn = document.querySelector('.carousel-prev');
-    const nextBtn = document.querySelector('.carousel-next');
-
-    let currentSlide = 0;
-    let slideInterval;
-
-    function showSlide(index) {
-        slides.forEach(slide => slide.classList.remove('active'));
-        indicators.forEach(indicator => indicator.classList.remove('active'));
-
-        slides[index].classList.add('active');
-        indicators[index].classList.add('active');
-        currentSlide = index;
-    }
-
-    function nextSlide() {
-        const nextIndex = (currentSlide + 1) % slides.length;
-        showSlide(nextIndex);
-    }
-
-    function prevSlide() {
-        const prevIndex = (currentSlide - 1 + slides.length) % slides.length;
-        showSlide(prevIndex);
-    }
-
-    function startAutoSlide() {
-        slideInterval = setInterval(nextSlide, 5000); // Change slide every 5 seconds
-    }
-
-    function stopAutoSlide() {
-        clearInterval(slideInterval);
-    }
-
-    // Event listeners
-    nextBtn.addEventListener('click', () => {
-        nextSlide();
-        stopAutoSlide();
-        startAutoSlide();
-    });
-
-    prevBtn.addEventListener('click', () => {
-        prevSlide();
-        stopAutoSlide();
-        startAutoSlide();
-    });
-
-    indicators.forEach((indicator, index) => {
-        indicator.addEventListener('click', () => {
-            showSlide(index);
-            stopAutoSlide();
-            startAutoSlide();
-        });
-    });
-
-    // Pause on hover
-    carousel.addEventListener('mouseenter', stopAutoSlide);
-    carousel.addEventListener('mouseleave', startAutoSlide);
-
-    // Start auto-sliding
-    startAutoSlide();
-});
-</script>
-
-    <!-- Flash Deals -->
-    <section class="py-16" id="deals">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="flex items-center justify-between mb-8">
-                <div>
-                    <h2 class="text-3xl font-bold text-gray-900 mb-2">⚡ Flash Deals</h2>
-                    <p class="text-gray-600">Limited time offers - Don't miss out!</p>
-                </div>
-                {{-- <div class="bg-red-100 text-red-800 px-4 py-2 rounded-lg font-semibold" x-data="countdown()" x-text="timeLeft">
-
-                </div> --}}
-            </div>
-
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                @php
-                    $deals = \App\Models\Deal::inStock()->take(6)->get();
-                @endphp
-
-                @forelse($deals as $deal)
-                    <a href="{{ route('product.show', $deal->id) }}" class="bg-white rounded-xl border border-gray-100 hover:border-gray-200 overflow-hidden group transition-all duration-200 block">
-                        <div class="relative">
-                            @if($deal->images_url && count($deal->images_url) > 0)
-                                <img
-                                    src="{{ $deal->images_url[0] }}"
-                                    alt="{{ $deal->product_name }}"
-                                    class="w-full aspect-video object-cover"
-                                    loading="lazy"
-                                    onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';"
-                                >
-                                <div class="absolute inset-0 flex items-center justify-center" style="display: none;">
-                                    <svg class="w-16 h-16 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
-                                    </svg>
-                                </div>
-                            @else
-                                <div class="w-full aspect-video bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
-                                    <svg class="w-16 h-16 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
-                                    </svg>
-                                </div>
-                            @endif
-                            @if($deal->old_price && $deal->old_price > $deal->price)
-                                @php
-                                    $discountPercentage = round((($deal->old_price - $deal->price) / $deal->old_price) * 100);
-                                @endphp
-                                <div class="absolute top-3 left-3 bg-red-500 text-white px-2 py-1 rounded-md text-xs font-bold">
-                                    {{ $discountPercentage }}% OFF
-                                </div>
-                            @endif
-                        </div>
-                        <div class="p-6">
-                            <h3 class="font-semibold text-gray-900 mb-3 px-1">{{ $deal->product_name }}</h3>
-                            <div class="flex items-center space-x-2 mb-5 px-1">
-                                <span class="text-2xl font-bold text-gray-900">₦{{ number_format($deal->price, 0) }}</span>
-                                @if($deal->old_price && $deal->old_price > $deal->price)
-                                    <span class="text-lg text-gray-500 line-through">₦{{ number_format($deal->old_price, 0) }}</span>
-                                    <span class="bg-red-100 text-red-800 px-3 py-1 rounded-full text-xs font-medium">
-                                        Save ₦{{ number_format($deal->old_price - $deal->price, 0) }}
-                                    </span>
-                                @endif
-                            </div>
-                            <div class="flex items-center justify-between px-1">
-                                <span class="text-sm font-medium text-gray-600">⚡ Flash Deal</span>
-                                <button
-                                    onclick="event.preventDefault(); event.stopPropagation(); window.dispatchEvent(new CustomEvent('add-to-cart', { detail: { productId: '{{ $deal->id }}', type: 'deal' } }));"
-                                    class="flex items-center gap-2 text-blue-600 hover:text-blue-700 font-medium text-sm transition-colors group"
-                                >
-                                    {{-- <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                        <path d="M2 3L2.26491 3.0883C3.58495 3.52832 4.24497 3.74832 4.62248 4.2721C5 4.79587 5 5.49159 5 6.88304V9.5C5 12.7875 5 14.4312 5.90796 15.5376C6.07418 15.7401 6.25989 15.9258 6.46243 16.092C7.56878 17 9.21252 17 12.5 17C15.7875 17 17.4312 17 18.5376 16.092C18.7401 15.9258 18.9258 15.7401 19.092 15.5376C20 14.4312 20 12.7875 20 9.5V8.5C20 7.09554 20 6.39331 19.6532 5.88886C19.3065 5.38441 18.6851 5.18885 17.4422 4.79773L12.5 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-                                        <path d="M7.5 18C8.32843 18 9 18.6716 9 19.5C9 20.3284 8.32843 21 7.5 21C6.67157 21 6 20.3284 6 19.5C6 18.6716 6.67157 18 7.5 18Z" stroke="currentColor" stroke-width="1.5"/>
-                                        <path d="M16.5 18.0001C17.3284 18.0001 18 18.6716 18 19.5001C18 20.3285 17.3284 21.0001 16.5 21.0001C15.6716 21.0001 15 20.3285 15 19.5001C15 18.6716 15.6716 18.0001 16.5 18.0001Z" stroke="currentColor" stroke-width="1.5"/>
-                                    </svg>
-                                    Quick Add
-                                </button> --}}
-                            </div>
-                        </div>
+                <div class="mt-7 flex flex-wrap gap-3">
+                    <a href="#products" class="btn btn-lg btn-primary">
+                        Shop now
+                        <x-icon name="arrow-right" />
                     </a>
-                @empty
-                    <div class="col-span-full text-center py-12">
-                        <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-                        </svg>
-                        <h3 class="mt-2 text-sm font-medium text-gray-900">No deals available</h3>
-                        <p class="mt-1 text-sm text-gray-500">Check back later for amazing deals!</p>
-                    </div>
-                @endforelse
+                    @if($deals->isNotEmpty())
+                        <a href="#deals" class="btn btn-lg btn-on-ink">
+                            <x-icon name="flash" />
+                            View deals
+                        </a>
+                    @endif
+                </div>
             </div>
+
+            {{-- Showcase: the newest in-stock products. One is featured at a time and the thumbnails switch it. --}}
+            @if($showcase->isNotEmpty())
+                <div
+                    x-data="{ active: 0, total: {{ $showcase->count() }}, paused: false }"
+                    x-init="if (total > 1 && ! window.matchMedia('(prefers-reduced-motion: reduce)').matches) { setInterval(() => { if (! paused) active = (active + 1) % total }, 4500) }"
+                    @mouseenter="paused = true"
+                    @mouseleave="paused = false"
+                    @focusin="paused = true"
+                    @focusout="paused = false"
+                >
+                    <div class="relative overflow-hidden rounded-3xl bg-white text-ink">
+                        @foreach($showcase as $index => $product)
+                            @php
+                                $productUrl = $product->url;
+                                $image = $product->images_url[0] ?? null;
+                            @endphp
+                            <a
+                                href="{{ $productUrl }}"
+                                x-show="active === {{ $index }}"
+                                x-transition:enter="transition-opacity duration-500 ease-out"
+                                x-transition:enter-start="opacity-0"
+                                x-transition:enter-end="opacity-100"
+                                x-transition:leave="absolute inset-0 transition-opacity duration-300 ease-out"
+                                x-transition:leave-start="opacity-100"
+                                x-transition:leave-end="opacity-0"
+                                class="flex items-stretch gap-4 p-3 sm:gap-6 sm:p-4"
+                                @if($index > 0) x-cloak @endif
+                            >
+                                <span class="relative flex aspect-square w-2/5 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-gray-100 text-gray-300 sm:w-1/2">
+                                    <x-icon name="image" class="size-10" />
+                                    @if($image)
+                                        <img
+                                            src="{{ $image }}"
+                                            alt="{{ $product->product_name }}"
+                                            class="absolute inset-0 size-full object-cover"
+                                            @if($index === 0) fetchpriority="high" @else loading="lazy" @endif
+                                            onerror="this.remove()"
+                                        >
+                                    @endif
+                                </span>
+                                <span class="flex min-w-0 flex-1 flex-col justify-center py-1 pr-1 sm:pr-3">
+                                    <span class="text-xs font-semibold text-gray-500">Just in</span>
+                                    <span class="mt-1.5 line-clamp-3 text-base leading-snug font-bold sm:text-xl">{{ $product->product_name }}</span>
+                                    <span class="mt-3 text-xl font-extrabold tracking-tight tabular-nums sm:text-2xl">{{ \App\Helpers\Money::naira($product->display_price) }}</span>
+                                    <span class="mt-4 inline-flex items-center gap-1 text-sm font-semibold text-brand">
+                                        View product
+                                        <x-icon name="chevron-right" class="size-4" />
+                                    </span>
+                                </span>
+                            </a>
+                        @endforeach
+                    </div>
+
+                    @if($showcase->count() > 1)
+                        <div class="mt-3 grid grid-cols-4 gap-2 sm:gap-3">
+                            @foreach($showcase as $index => $product)
+                                @php $image = $product->images_url[0] ?? null; @endphp
+                                <button
+                                    type="button"
+                                    @click="active = {{ $index }}"
+                                    :aria-pressed="active === {{ $index }}"
+                                    :class="active === {{ $index }} ? 'border-white bg-white/15' : 'border-white/10 bg-white/5 hover:border-white/40'"
+                                    class="flex items-center gap-2 rounded-2xl border p-1.5 text-left transition-colors"
+                                    aria-label="Show {{ $product->product_name }}"
+                                >
+                                    <span class="relative flex aspect-square w-full shrink-0 items-center justify-center overflow-hidden rounded-xl bg-white/10 text-white/40 sm:w-11">
+                                        <x-icon name="image" class="size-4" />
+                                        @if($image)
+                                            <img src="{{ $image }}" alt="" loading="lazy" class="absolute inset-0 size-full object-cover" onerror="this.remove()">
+                                        @endif
+                                    </span>
+                                    <span class="hidden min-w-0 flex-1 truncate text-xs font-medium text-white/80 sm:block">{{ $product->product_name }}</span>
+                                </button>
+                            @endforeach
+                        </div>
+                    @endif
+                </div>
+            @endif
         </div>
     </section>
 
-    <!-- Products Section with Livewire -->
-    <section class="py-16 bg-gray-50" id="products">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="flex items-center justify-between mb-8">
-                <h2 class="text-3xl font-bold text-gray-900">Featured Products</h2>
+    {{-- What to expect when buying --}}
+    <section class="border-b border-gray-200 bg-white" aria-label="How buying works">
+        <ul class="mx-auto grid max-w-[1440px] grid-cols-2 gap-x-4 gap-y-4 px-4 py-5 sm:gap-y-5 sm:px-6 sm:py-6 lg:grid-cols-4 lg:px-8">
+            <li class="flex items-center gap-3 sm:items-start">
+                <x-icon name="shop" class="size-6 shrink-0 text-brand sm:mt-0.5" />
+                <div>
+                    <p class="text-sm font-bold">Store pickup in Ikeja</p>
+                    <p class="hidden text-sm text-gray-600 sm:block">{{ config('store.hours') }}</p>
+                </div>
+            </li>
+            <li class="flex items-center gap-3 sm:items-start">
+                <x-icon name="truck" class="size-6 shrink-0 text-brand sm:mt-0.5" />
+                <div>
+                    <p class="text-sm font-bold">Delivery nationwide</p>
+                    <p class="hidden text-sm text-gray-600 sm:block">{{ config('store.delivery') }}</p>
+                </div>
+            </li>
+            <li class="flex items-center gap-3 sm:items-start">
+                <x-icon name="bank" class="size-6 shrink-0 text-brand sm:mt-0.5" />
+                <div>
+                    <p class="text-sm font-bold">Pay by bank transfer</p>
+                    <p class="hidden text-sm text-gray-600 sm:block">Account details at checkout</p>
+                </div>
+            </li>
+            <li class="flex items-center gap-3 sm:items-start">
+                <x-icon name="shield" class="size-6 shrink-0 text-brand sm:mt-0.5" />
+                <div>
+                    <p class="text-sm font-bold">New and UK used</p>
+                    <p class="hidden text-sm text-gray-600 sm:block">Condition shown on every item</p>
+                </div>
+            </li>
+        </ul>
+    </section>
+
+    {{-- Deal of the day: one product at a special price until the countdown ends (shows only while a deal runs) --}}
+    {{-- Today's deal. The server prints it in the shape DealOfTheDay.jsx draws, so the page
+         below does not jump when the component mounts, and the deal is in the HTML itself. --}}
+    <div data-react-component="DealOfTheDay">
+        @if($deal = \App\View\Composers\StoreOffersComposer::offers()['deal_of_day'] ?? null)
+            @php
+                $dealProduct = $deal['product'];
+                $dealSaving = max(0, (float) ($deal['usual_price'] ?? 0) - (float) $deal['price']);
+                $dealLeft = $deal['ends_at'] ? max(0, now()->diffInSeconds(\Illuminate\Support\Carbon::parse($deal['ends_at']), false)) : null;
+            @endphp
+            <section class="mx-auto max-w-[1440px] px-4 pt-8 sm:px-6 sm:pt-10 lg:px-8">
+                <div class="grid grid-cols-1 overflow-hidden rounded-3xl border border-gray-200 bg-white md:grid-cols-[minmax(0,5fr)_minmax(0,6fr)]">
+                    <a href="{{ $dealProduct['url'] }}" class="block bg-gray-100" tabindex="-1" aria-hidden="true">
+                        <span class="relative flex aspect-[4/3] w-full items-center justify-center overflow-hidden bg-gray-100 md:aspect-auto md:h-full md:min-h-80">
+                            @if($dealProduct['image'])
+                                <img src="{{ $dealProduct['image'] }}" alt="{{ $dealProduct['product_name'] }}" decoding="async" class="size-full object-cover" onerror="this.remove()">
+                            @endif
+                        </span>
+                    </a>
+
+                    <div class="flex flex-col justify-center p-5 sm:p-8 lg:p-10">
+                        <div class="flex flex-wrap items-center gap-2">
+                            <h2 class="rounded-full bg-sale px-3 py-1 text-xs font-bold text-white">Deal of the day</h2>
+                            <span class="text-xs font-semibold text-gray-600">{{ ['new' => 'New', 'uk_used' => 'UK used', 'refurbished' => 'Refurbished'][$dealProduct['product_status']] ?? 'New' }}</span>
+                        </div>
+
+                        <p class="mt-3 text-2xl leading-tight font-extrabold tracking-tight sm:text-3xl">
+                            <a href="{{ $dealProduct['url'] }}" class="hover:text-brand">{{ $deal['headline'] ?: $dealProduct['product_name'] }}{{ $deal['storage'] ? ' '.$deal['storage'] : '' }}</a>
+                        </p>
+                        @if($deal['headline'])
+                            <p class="mt-1 text-sm text-gray-600">{{ $dealProduct['product_name'] }}</p>
+                        @endif
+                        @if($dealProduct['overview'])
+                            <p class="mt-2 line-clamp-2 max-w-[52ch] text-sm leading-relaxed text-gray-700">{{ $dealProduct['overview'] }}</p>
+                        @endif
+
+                        <div class="mt-4 flex flex-wrap items-baseline gap-x-3 gap-y-1">
+                            <span class="text-3xl font-extrabold tracking-tight tabular-nums sm:text-4xl">{{ \App\Helpers\Money::naira($deal['price']) }}</span>
+                            @if($dealSaving > 0)
+                                <s class="text-lg text-gray-500 tabular-nums">{{ \App\Helpers\Money::naira($deal['usual_price']) }}</s>
+                                <span class="rounded-full bg-sale-light px-2.5 py-1 text-xs font-bold text-sale">Save {{ \App\Helpers\Money::naira($dealSaving) }}</span>
+                            @endif
+                        </div>
+
+                        @if($dealLeft !== null)
+                            <div class="mt-6">
+                                <p class="mb-2 text-sm font-semibold">{{ $dealSaving > 0 ? 'Back to '.\App\Helpers\Money::naira($deal['usual_price']).' in' : 'This price ends in' }}</p>
+                                <div class="flex items-start gap-1.5" aria-hidden="true">
+                                    @foreach(array_filter(['days' => intdiv((int) $dealLeft, 86400) ?: null, 'hrs' => intdiv((int) $dealLeft % 86400, 3600), 'min' => intdiv((int) $dealLeft % 3600, 60), 'sec' => (int) $dealLeft % 60], fn ($value) => $value !== null) as $unit => $value)
+                                        <div class="flex flex-col items-center gap-1">
+                                            <span class="flex h-12 min-w-12 items-center justify-center rounded-xl bg-ink px-2 text-xl font-extrabold text-white tabular-nums">{{ str_pad((string) $value, 2, '0', STR_PAD_LEFT) }}</span>
+                                            <span class="text-[11px] font-semibold text-gray-500">{{ $unit }}</span>
+                                        </div>
+                                    @endforeach
+                                </div>
+                            </div>
+                        @endif
+
+                        <div class="mt-6 flex flex-wrap items-center gap-3">
+                            <a href="{{ $dealProduct['url'] }}" class="btn btn-lg btn-primary">Add to cart</a>
+                            <a href="{{ $dealProduct['url'] }}" class="btn btn-lg btn-outline">See full details</a>
+                        </div>
+
+                        @php
+                            // The same wording as leftAtPrice() and orderLimit() in resources/js/lib/offers.js
+                            $left = $deal['remaining'];
+                            $dealNotes = array_filter([
+                                $left === null || $left <= 0 ? null : ($left === 1 ? 'Last one at this price' : ($left <= 5 ? 'Only ' : '').$left.' left at this price'),
+                                $deal['per_order_limit'] ? 'Limit '.$deal['per_order_limit'].' per order, so more people get one' : null,
+                            ]);
+                        @endphp
+                        @if($dealNotes)
+                            <p class="mt-3 text-sm text-gray-600">{{ implode('. ', $dealNotes) }}.</p>
+                        @endif
+                    </div>
+                </div>
+            </section>
+        @endif
+    </div>
+
+    {{-- Flash Deals --}}
+    @if($deals->isNotEmpty())
+        {{-- A solid band of the brand colour sets the deals apart from the rest of the page --}}
+        <section class="scroll-mt-28 bg-brand py-9 text-white sm:py-11" id="deals">
+            <div class="mx-auto max-w-[1440px] px-4 sm:px-6 lg:px-8">
+                <div class="mb-5 flex items-center gap-3 sm:mb-6">
+                    <span class="flex size-11 shrink-0 items-center justify-center rounded-full bg-white text-brand">
+                        <x-icon name="flash" class="size-6" />
+                    </span>
+                    <div class="min-w-0">
+                        <h2 class="text-2xl leading-tight font-extrabold tracking-tight sm:text-3xl">Flash deals</h2>
+                        <p class="text-sm text-white/85">Limited time offers while stock lasts.</p>
+                    </div>
+                </div>
+
+                <div data-react-component="ProductRail" data-prop-type="deal" data-prop-items="{{ $deals->toJson() }}"></div>
             </div>
+        </section>
+    @endif
 
-            <!-- Livewire Product Grid Component -->
-            @include('react.product-grid')
+    {{-- Drops: limited units released at a set time (shows only when there are drops) --}}
+    <div data-react-component="DropsRail"></div>
+
+    {{-- Bundles: products that go together, for one price (shows only when there are bundles) --}}
+    <div data-react-component="BundleRail"></div>
+
+    {{-- Products --}}
+    <section class="scroll-mt-32 pt-10" id="products">
+        <div class="mx-auto max-w-[1440px] px-4 sm:px-6 lg:px-8">
+            <h2 class="mb-5 text-2xl font-extrabold tracking-tight sm:text-3xl">All products</h2>
+
+            @include('react.product-grid', ['listing' => $listing, 'pageBase' => '/products'])
         </div>
-
-
-    <script>
-        function countdown() {
-            return {
-                timeLeft: '23:45:12',
-                init() {
-                    // Simple countdown timer
-                    setInterval(() => {
-                        // This would be calculated based on actual end time
-                        // For demo purposes, keeping it static
-                    }, 1000);
-                }
-            }
-        }
-
-
-    </script>
+    </section>
 </x-layout>

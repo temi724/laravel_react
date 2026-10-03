@@ -69,7 +69,34 @@ return [
             'report' => false,
         ],
 
+        // A bunny.net storage zone (see App\Filesystem\BunnyStorageAdapter).
+        // The values are on the storage zone's "FTP & API access" page; the CDN URL is the
+        // pull zone connected to the zone.
+        'bunny' => [
+            'driver' => 'bunny',
+            'storage_zone' => env('BUNNY_STORAGE_ZONE'),
+            'access_key' => env('BUNNY_STORAGE_KEY'), // the storage zone password, not the account API key
+            'hostname' => env('BUNNY_STORAGE_HOSTNAME', 'storage.bunnycdn.com'),
+            'cdn_url' => env('BUNNY_CDN_URL'),
+            'root' => env('BUNNY_STORAGE_ROOT', ''),
+            'throw' => true,
+            'report' => false,
+        ],
+
     ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Uploads Disk
+    |--------------------------------------------------------------------------
+    |
+    | Where uploaded product photos are stored. It is the bunny.net storage zone
+    | as soon as its name and password are set, and the local images folder
+    | until then. Set UPLOADS_DISK to choose one yourself.
+    |
+    */
+
+    'uploads' => env('UPLOADS_DISK', env('BUNNY_STORAGE_ZONE') && env('BUNNY_STORAGE_KEY') ? 'bunny' : 'images'),
 
     /*
     |--------------------------------------------------------------------------

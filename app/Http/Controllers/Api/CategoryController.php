@@ -4,7 +4,9 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Category;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 
 class CategoryController extends Controller
 {
@@ -17,16 +19,28 @@ class CategoryController extends Controller
     }
 
     /**
+     * Every category with how many products it holds, for the admin Categories page.
+     */
+    public function adminIndex(): JsonResponse
+    {
+        return response()->json([
+            'success' => true,
+            'categories' => Category::withCount('products')->orderBy('name')->get(),
+        ]);
+    }
+
+    /**
      * Store a newly created resource in storage.
      */
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'name' => 'required|string|unique:categories,name',
-        ]);
+            'name' => ['required', 'string', 'max:100', Rule::unique('categories', 'name')],
+        ], $this->messages());
 
-        $category = Category::create($validated);
-        return response()->json($category, 201);
+        $category = Category::create(['name' => trim($validated['name'])]);
+
+        return response()->json($category->loadCount('products'), 201);
     }
 
     /**
@@ -46,11 +60,12 @@ class CategoryController extends Controller
         $category = Category::findOrFail($id);
 
         $validated = $request->validate([
-            'name' => 'sometimes|string|unique:categories,name,' . $id,
-        ]);
+            'name' => ['required', 'string', 'max:100', Rule::unique('categories', 'name')->ignore($category->id)],
+        ], $this->messages());
 
-        $category->update($validated);
-        return response()->json($category);
+        $category->update(['name' => trim($validated['name'])]);
+
+        return response()->json($category->loadCount('products'));
     }
 
     /**
@@ -58,8 +73,22 @@ class CategoryController extends Controller
      */
     public function destroy(string $id)
     {
-        $category = Category::findOrFail($id);
+        $category = Category::withCount('products')->findOrFail($id);
+
+        // Deleting a category in the database takes its products with it, so only an empty one may go
+        if ($category->products_count > 0) {
+            return response()->json([
+                'message' => sprintf(
+                    '%s still has %d %s. Move them to another category or delete them first.',
+                    $category->name,
+                    $category->products_count,
+                    $category->products_count === 1 ? 'product' : 'products'
+                ),
+            ], 422);
+        }
+
         $category->delete();
+
         return response()->json(null, 204);
     }
 
@@ -70,5 +99,14 @@ class CategoryController extends Controller
     {
         $category = Category::with('products')->findOrFail($id);
         return response()->json($category);
+    }
+
+    private function messages(): array
+    {
+        return [
+            'name.required' => 'Enter a name for the category.',
+            'name.unique' => 'There is already a category with that name.',
+            'name.max' => 'Keep the name under 100 characters.',
+        ];
     }
 }

@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Exceptions\InsufficientStock;
+use App\Helpers\SerialNumbers;
 use App\Http\Controllers\Controller;
 use App\Models\Admin;
 use App\Models\Product;
@@ -11,11 +13,16 @@ use App\Models\ProductView;
 use App\Models\UserSession;
 use App\Models\CheckoutEvent;
 use App\Models\TrafficSource;
+use App\Services\Inventory;
+use App\Services\Offers;
+use App\Support\ProductImages;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 
 class AdminController extends Controller
 {
@@ -79,7 +86,7 @@ class AdminController extends Controller
     {
         $validated = $request->validate([
             'name' => 'required|string|max:255',
-            'email' => 'required|email|unique:admins,email',
+            'email' => 'required|email|unique:users,email',
             'password' => 'required|string|min:6',
             'phone_number' => 'required|string|max:20',
         ]);
@@ -164,7 +171,7 @@ class AdminController extends Controller
 
         $validated = $request->validate([
             'name' => 'sometimes|required|string|max:255',
-            'email' => 'sometimes|required|email|unique:admins,email,' . $id,
+            'email' => 'sometimes|required|email|unique:users,email,' . $id,
             'password' => 'sometimes|required|string|min:6',
             'phone_number' => 'sometimes|required|string|max:20',
         ]);
@@ -247,38 +254,52 @@ class AdminController extends Controller
     public function login(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'email' => 'required|email',
-            'password' => 'required|string',
+            'email' => 'required|email|max:255',
+            'password' => 'required|string|max:255',
         ]);
+
+        // Five wrong passwords for the same email from the same address lock that pair out for a while
+        $throttleKey = 'admin-login:' . Str::lower($validated['email']) . '|' . $request->ip();
+        if (RateLimiter::tooManyAttempts($throttleKey, 5)) {
+            $seconds = RateLimiter::availableIn($throttleKey);
+            Log::channel('audit')->warning('admin login locked out', ['email' => $validated['email'], 'ip' => $request->ip()]);
+
+            return response()->json([
+                'error' => 'Too many attempts',
+                'message' => 'Too many sign-in attempts. Try again in ' . max(1, (int) ceil($seconds / 60)) . ' minute(s).'
+            ], 429);
+        }
 
         // Find admin by email
         $admin = Admin::where('email', $validated['email'])->first();
 
-        // Debug: Log the attempt
-        Log::info('Login attempt for email: ' . $validated['email']);
+        // One answer for an unknown email and a wrong password, so neither can be told apart
+        if (!$admin || !$admin->checkPassword($validated['password'])) {
+            RateLimiter::hit($throttleKey, 900);
+            Log::channel('audit')->warning('admin login failed', ['email' => $validated['email'], 'ip' => $request->ip()]);
 
-        if (!$admin) {
-            Log::info('Admin not found for email: ' . $validated['email']);
             return response()->json([
                 'error' => 'Invalid credentials',
                 'message' => 'Email or password is incorrect'
             ], 401);
         }
 
-        Log::info('Admin found: ' . $admin->name . ', checking password...');
+        RateLimiter::clear($throttleKey);
 
-        // Check password
-        $passwordCheck = $admin->checkPassword($validated['password']);
-        Log::info('Password check result: ' . ($passwordCheck ? 'SUCCESS' : 'FAILED'));
+        // Said only after the right password, so a stranger cannot tell which accounts exist
+        if (!$admin->is_active) {
+            Log::channel('audit')->warning('deactivated admin tried to sign in', ['admin_id' => $admin->id, 'ip' => $request->ip()]);
 
-        if (!$passwordCheck) {
             return response()->json([
-                'error' => 'Invalid credentials',
-                'message' => 'Email or password is incorrect'
-            ], 401);
+                'error' => 'Account deactivated',
+                'message' => 'This account has been deactivated. Ask the super admin to reactivate it.'
+            ], 403);
         }
 
-        Log::info('Login successful for admin: ' . $admin->name);
+        $admin->forceFill(['last_login_at' => now()])->saveQuietly();
+
+        // A fresh session id on sign-in, so an id planted before login is worthless afterwards
+        $request->session()->regenerate();
 
         // Store admin session for future requests
         session([
@@ -286,6 +307,8 @@ class AdminController extends Controller
             'admin_logged_in' => true,
             'admin_name' => $admin->name
         ]);
+
+        Log::channel('audit')->info('admin login', ['admin_id' => $admin->id, 'admin' => $admin->email, 'ip' => $request->ip()]);
 
         return response()->json([
             'success' => true,
@@ -505,7 +528,7 @@ class AdminController extends Controller
                 if ($request->has('search') && !empty($request->search)) {
                     $searchTerm = $request->search;
                     $productQuery->where(function ($q) use ($searchTerm) {
-                        $q->where('product_name', 'like', "%{$searchTerm}%")
+                        $q->where('name', 'like', "%{$searchTerm}%")
                           ->orWhere('description', 'like', "%{$searchTerm}%")
                           ->orWhere('id', 'like', "%{$searchTerm}%");
                     });
@@ -519,13 +542,19 @@ class AdminController extends Controller
                 // Status filter for products
                 if ($request->has('status') && $request->status !== 'all') {
                     if ($request->status === 'in_stock') {
-                        $productQuery->where('in_stock', true);
+                        $productQuery->inStock(true);
                     } elseif ($request->status === 'out_of_stock') {
-                        $productQuery->where('in_stock', false);
+                        $productQuery->inStock(false);
+                    } elseif ($request->status === 'no_photo') {
+                        $productQuery->withoutPhotos();
                     }
                 }
 
                 $products = $productQuery->with('category')->orderBy('created_at', 'desc')->get();
+
+                // Serial numbers, the number sold and who listed the product are for admins only,
+                // so they are added here and not in the public product data
+                $products->each->append(Product::ADMIN_FIELDS);
             }
 
             // Fetch deals if needed
@@ -553,6 +582,8 @@ class AdminController extends Controller
                         $dealQuery->where('in_stock', true);
                     } elseif ($request->status === 'out_of_stock') {
                         $dealQuery->where('in_stock', false);
+                    } elseif ($request->status === 'no_photo') {
+                        $dealQuery->where(fn ($q) => $q->whereNull('images_url')->orWhereIn('images_url', ['', '[]', 'null']));
                     }
                 }
 
@@ -572,6 +603,51 @@ class AdminController extends Controller
                 'message' => 'Error loading products'
             ], 500);
         }
+    }
+
+    /**
+     * One product or deal with everything the edit form needs, serial numbers included
+     */
+    public function getProduct(Request $request, $id): JsonResponse
+    {
+        $product = Product::with('category')->find($id);
+        if ($product) {
+            return response()->json(['success' => true, 'product' => $product->append(Product::ADMIN_FIELDS), 'type' => 'product']);
+        }
+
+        $deal = Deal::with('category')->find($id);
+        if ($deal) {
+            return response()->json(['success' => true, 'product' => $deal, 'type' => 'deal']);
+        }
+
+        return response()->json(['success' => false, 'message' => 'Product not found'], 404);
+    }
+
+    /**
+     * The stock count and serial numbers sent with a product, checked against each other
+     *
+     * @return array{stock_quantity: int, serial_numbers: list<string>}
+     */
+    private function validatedStock(Request $request): array
+    {
+        $validated = $request->validate([
+            'stock_quantity' => 'required|integer|min:0|max:1000000',
+            'serial_numbers' => 'nullable|array',
+            'serial_numbers.*' => 'nullable|string|max:' . SerialNumbers::MAX_LENGTH,
+        ], [
+            'stock_quantity.required' => 'Enter how many units you have in stock (0 if none).',
+            'stock_quantity.integer' => 'The stock count must be a whole number.',
+        ]);
+
+        $stock = (int) $validated['stock_quantity'];
+        $serials = SerialNumbers::clean($validated['serial_numbers'] ?? []);
+
+        $problems = SerialNumbers::productProblems($serials, $stock);
+        if ($problems !== []) {
+            throw ValidationException::withMessages(['serial_numbers' => $problems]);
+        }
+
+        return ['stock_quantity' => $stock, 'serial_numbers' => $serials];
     }
 
     /**
@@ -655,14 +731,8 @@ class AdminController extends Controller
             if ($request->hasFile('product_images')) {
                 foreach ($request->file('product_images') as $image) {
                     if ($image && $image->isValid()) {
-                        // Generate a unique filename
-                        $filename = Str::random(40) . '.' . $image->getClientOriginalExtension();
-
-                        // Store the image in the images/products directory
-                        $path = Storage::disk('images')->putFileAs('products', $image, $filename);
-
-                        // Generate the public URL
-                        $uploadedImageUrls[] = '/images/products/' . $filename;
+                        // Stored on the uploads disk (bunny.net once it is set up); the address to show it from comes back
+                        $uploadedImageUrls[] = ProductImages::store($image);
                     }
                 }
             }
@@ -703,11 +773,17 @@ class AdminController extends Controller
                 'created_by_admin' => $admin->name
             ], 201);
 
+        } catch (ValidationException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation failed',
+                'errors' => $e->errors()
+            ], 422);
         } catch (\Exception $e) {
             Log::error('Error creating deal: ' . $e->getMessage());
             return response()->json([
                 'success' => false,
-                'message' => 'Error creating deal: ' . $e->getMessage()
+                'message' => config('app.debug') ? 'Error creating deal: ' . $e->getMessage() : 'Error creating deal'
             ], 500);
         }
     }
@@ -720,7 +796,7 @@ class AdminController extends Controller
         try {
             $validated = $request->validate([
                 'product_name' => 'required|string',
-                'category_id' => 'nullable|string|exists:categories,id',
+                'category_id' => 'required|string|exists:categories,id',
                 'price' => 'required|numeric',
                 'overview' => 'nullable|string',
                 'description' => 'nullable|string',
@@ -732,24 +808,23 @@ class AdminController extends Controller
                 'specification' => 'nullable|array',
                 'specification.*.key' => 'required_with:specification|string',
                 'specification.*.value' => 'required_with:specification|string',
+                'storage_options' => 'nullable|array',
+                'storage_options.*.storage' => 'required_with:storage_options|string',
+                'storage_options.*.price' => 'required_with:storage_options|numeric',
                 'product_status' => 'nullable|string|in:new,uk_used,refurbished',
                 'in_stock' => 'boolean',
                 'product_images.*' => 'nullable|file|image|mimes:jpg,jpeg,png,webp|max:2048'
             ]);
+
+            $validated = array_merge($validated, $this->validatedStock($request));
 
             // Handle image uploads
             $uploadedImageUrls = [];
             if ($request->hasFile('product_images')) {
                 foreach ($request->file('product_images') as $image) {
                     if ($image && $image->isValid()) {
-                        // Generate a unique filename
-                        $filename = Str::random(40) . '.' . $image->getClientOriginalExtension();
-
-                        // Store the image in the images/products directory
-                        $path = Storage::disk('images')->putFileAs('products', $image, $filename);
-
-                        // Generate the public URL
-                        $uploadedImageUrls[] = '/images/products/' . $filename;
+                        // Stored on the uploads disk (bunny.net once it is set up); the address to show it from comes back
+                        $uploadedImageUrls[] = ProductImages::store($image);
                     }
                 }
             }
@@ -777,10 +852,11 @@ class AdminController extends Controller
                 $validated['specification'] = $specificationObject;
             }
 
-            $product = \App\Models\Product::create($validated);
-
-            // Log the admin who created the product
+            // The admin listing the product is saved with it
             $admin = $request->get('authenticated_admin');
+            $product = (new Product($validated))->listedBy($admin);
+            $product->save();
+
             Log::info('Product created by admin: ' . $admin->name . ' (ID: ' . $admin->id . ')');
 
             return response()->json([
@@ -790,11 +866,17 @@ class AdminController extends Controller
                 'created_by_admin' => $admin->name
             ], 201);
 
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation failed',
+                'errors' => $e->errors()
+            ], 422);
         } catch (\Exception $e) {
             Log::error('Error creating product: ' . $e->getMessage());
             return response()->json([
                 'success' => false,
-                'message' => 'Error creating product: ' . $e->getMessage()
+                'message' => config('app.debug') ? 'Error creating product: ' . $e->getMessage() : 'Error creating product'
             ], 500);
         }
     }
@@ -863,7 +945,7 @@ class AdminController extends Controller
     public function getSale(Request $request, $id): JsonResponse
     {
         try {
-            $sale = \App\Models\Sales::findOrFail($id);
+            $sale = \App\Models\Sales::where('id', $id)->orWhere('order_id', $id)->firstOrFail();
 
             return response()->json([
                 'success' => true,
@@ -918,13 +1000,29 @@ class AdminController extends Controller
             ]);
 
             $sale = \App\Models\Sales::findOrFail($id);
-            $sale->order_status = $validated['status'] === 'completed';
-            $sale->save();
+
+            DB::transaction(function () use ($sale, $validated, $request) {
+                // A completed order has left the shop: its units come out of stock (once)
+                if ($validated['status'] === 'completed') {
+                    Inventory::deduct($sale);
+                }
+
+                $sale->order_status = $validated['status'] === 'completed';
+                if ($sale->order_status) {
+                    $sale->completed_at = now();
+                    // The admin who received the payment stays the approver; otherwise it is whoever completes the order
+                    $sale->approved_by_admin = $sale->approved_by_admin ?: $request->get('authenticated_admin')?->name;
+                }
+                $sale->save();
+            });
 
             return response()->json([
                 'success' => true,
-                'message' => 'Order status updated successfully'
+                'message' => 'Order status updated successfully',
+                'order' => $sale
             ]);
+        } catch (InsufficientStock $e) {
+            return response()->json(['success' => false, 'message' => $e->getMessage()], 422);
         } catch (\Exception $e) {
             Log::error('Error updating sale status: ' . $e->getMessage());
             return response()->json([
@@ -945,13 +1043,34 @@ class AdminController extends Controller
             ]);
 
             $sale = \App\Models\Sales::findOrFail($id);
-            $sale->payment_status = $validated['payment_status'];
-            $sale->save();
+
+            DB::transaction(function () use ($sale, $validated, $request) {
+                // Payment received confirms the order: its units come out of stock and their serial
+                // numbers go onto the invoice. A failed or refunded payment puts them back.
+                if ($validated['payment_status'] === 'completed') {
+                    Inventory::deduct($sale);
+                } elseif (in_array($validated['payment_status'], ['failed', 'refunded'], true)) {
+                    Inventory::restore($sale);
+                    // Units held at a deal or drop price go back on offer
+                    app(Offers::class)->release($sale);
+                }
+
+                $sale->payment_status = $validated['payment_status'];
+                if ($validated['payment_status'] === 'completed') {
+                    // Who approved the order, and when
+                    $sale->approved_by_admin = $request->get('authenticated_admin')?->name;
+                    $sale->payment_approved_at = now();
+                }
+                $sale->save();
+            });
 
             return response()->json([
                 'success' => true,
-                'message' => 'Payment status updated successfully'
+                'message' => 'Payment status updated successfully',
+                'order' => $sale
             ]);
+        } catch (InsufficientStock $e) {
+            return response()->json(['success' => false, 'message' => $e->getMessage()], 422);
         } catch (\Exception $e) {
             Log::error('Error updating payment status: ' . $e->getMessage());
             return response()->json([
@@ -1059,7 +1178,7 @@ class AdminController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Error getting monthly sales data',
-                'error' => $e->getMessage()
+                'error' => config('app.debug') ? $e->getMessage() : null
             ], 500);
         }
     }
@@ -1170,7 +1289,7 @@ class AdminController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Error getting top selling items',
-                'error' => $e->getMessage()
+                'error' => config('app.debug') ? $e->getMessage() : null
             ], 500);
         }
     }
@@ -1221,7 +1340,7 @@ class AdminController extends Controller
 
             // Get top products
             $topProducts = ProductView::when($startDate || $endDate, $baseQuery)
-                ->with('product:id,product_name')
+                ->with('product:id,name,images')
                 ->selectRaw('product_id, COUNT(*) as views')
                 ->groupBy('product_id')
                 ->orderByDesc('views')
@@ -1251,7 +1370,7 @@ class AdminController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Error getting analytics overview',
-                'error' => $e->getMessage()
+                'error' => config('app.debug') ? $e->getMessage() : null
             ], 500);
         }
     }
@@ -1311,7 +1430,7 @@ class AdminController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Error getting traffic sources',
-                'error' => $e->getMessage()
+                'error' => config('app.debug') ? $e->getMessage() : null
             ], 500);
         }
     }
@@ -1381,9 +1500,24 @@ class AdminController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Error getting conversion funnel',
-                'error' => $e->getMessage()
+                'error' => config('app.debug') ? $e->getMessage() : null
             ], 500);
         }
+    }
+
+    /**
+     * Free-text tracking values are cut to the 255 characters their columns hold.
+     * A long URL or user agent is shortened rather than refused.
+     */
+    private function fitTrackingColumns(array $data): array
+    {
+        foreach (['page_url', 'page_title', 'user_agent', 'referrer'] as $key) {
+            if (isset($data[$key]) && is_string($data[$key])) {
+                $data[$key] = mb_substr($data[$key], 0, 255);
+            }
+        }
+
+        return $data;
     }
 
     /**
@@ -1393,14 +1527,16 @@ class AdminController extends Controller
     {
         try {
             $data = $request->validate([
-                'page_url' => 'required|string',
-                'page_title' => 'nullable|string',
-                'user_agent' => 'nullable|string',
-                'referrer' => 'nullable|string',
-                'session_id' => 'required|string',
-                'user_id' => 'nullable|string',
-                'duration' => 'nullable|integer'
+                'page_url' => 'required|string|max:2048',
+                'page_title' => 'nullable|string|max:2048',
+                'user_agent' => 'nullable|string|max:2048',
+                'referrer' => 'nullable|string|max:2048',
+                'session_id' => 'required|string|max:100',
+                'user_id' => 'nullable|string|max:100',
+                'duration' => 'nullable|integer|min:0'
             ]);
+
+            $data = $this->fitTrackingColumns($data);
 
             // Add IP address and geo data
             $data['ip_address'] = $request->ip();
@@ -1423,13 +1559,14 @@ class AdminController extends Controller
     {
         try {
             $data = $request->validate([
-                'product_id' => 'required|string',
-                'session_id' => 'required|string',
-                'user_id' => 'nullable|string',
-                'referrer' => 'nullable|string',
+                'product_id' => 'required|string|max:100',
+                'session_id' => 'required|string|max:100',
+                'user_id' => 'nullable|string|max:100',
+                'referrer' => 'nullable|string|max:2048',
                 'viewed_at' => 'nullable|date'
             ]);
 
+            $data = $this->fitTrackingColumns($data);
             $data['ip_address'] = $request->ip();
             if (!isset($data['viewed_at'])) {
                 $data['viewed_at'] = now();
@@ -1451,16 +1588,18 @@ class AdminController extends Controller
     {
         try {
             $data = $request->validate([
-                'session_id' => 'required|string',
-                'user_id' => 'nullable|string',
-                'user_agent' => 'nullable|string',
-                'device_type' => 'nullable|string',
-                'browser' => 'nullable|string',
-                'traffic_source' => 'nullable|string',
-                'referrer' => 'nullable|string',
-                'page_views' => 'nullable|integer',
-                'total_duration' => 'nullable|integer'
+                'session_id' => 'required|string|max:100',
+                'user_id' => 'nullable|string|max:100',
+                'user_agent' => 'nullable|string|max:2048',
+                'device_type' => 'nullable|string|max:50',
+                'browser' => 'nullable|string|max:50',
+                'traffic_source' => 'nullable|string|max:100',
+                'referrer' => 'nullable|string|max:2048',
+                'page_views' => 'nullable|integer|min:0',
+                'total_duration' => 'nullable|integer|min:0'
             ]);
+
+            $data = $this->fitTrackingColumns($data);
 
             // Add IP and geo data
             $data['ip_address'] = $request->ip();
@@ -1488,9 +1627,9 @@ class AdminController extends Controller
     {
         try {
             $data = $request->validate([
-                'session_id' => 'required|string',
-                'page_views' => 'nullable|integer',
-                'total_duration' => 'nullable|integer'
+                'session_id' => 'required|string|max:100',
+                'page_views' => 'nullable|integer|min:0',
+                'total_duration' => 'nullable|integer|min:0'
             ]);
 
             UserSession::where('session_id', $data['session_id'])
@@ -1514,12 +1653,12 @@ class AdminController extends Controller
     {
         try {
             $data = $request->validate([
-                'session_id' => 'required|string',
-                'event_type' => 'required|string',
-                'product_id' => 'nullable|string',
-                'value' => 'nullable|numeric',
-                'product_data' => 'nullable|array',
-                'currency' => 'nullable|string'
+                'session_id' => 'required|string|max:100',
+                'event_type' => 'required|string|max:50',
+                'product_id' => 'nullable|string|max:100',
+                'value' => 'nullable|numeric|min:0|max:99999999',
+                'product_data' => 'nullable|array|max:50',
+                'currency' => 'nullable|string|size:3'
             ]);
 
             $data['currency'] = $data['currency'] ?? 'NGN';
@@ -1549,7 +1688,7 @@ class AdminController extends Controller
 
             $validated = $request->validate([
                 'product_name' => 'required|string',
-                'category_id' => 'nullable|string|exists:categories,id',
+                'category_id' => 'required|string|exists:categories,id',
                 'price' => 'required|numeric',
                 'old_price' => 'nullable|numeric',
                 'overview' => 'nullable|string',
@@ -1569,6 +1708,8 @@ class AdminController extends Controller
                 'existing_images' => 'nullable|array'
             ]);
 
+            $validated = array_merge($validated, $this->validatedStock($request));
+
             // Handle image management
             $imageUrls = [];
 
@@ -1581,14 +1722,8 @@ class AdminController extends Controller
             if ($request->hasFile('product_images')) {
                 foreach ($request->file('product_images') as $image) {
                     if ($image && $image->isValid()) {
-                        // Generate a unique filename
-                        $filename = Str::random(40) . '.' . $image->getClientOriginalExtension();
-
-                        // Store the image in the images/products directory
-                        $path = Storage::disk('images')->putFileAs('products', $image, $filename);
-
-                        // Generate the public URL
-                        $imageUrls[] = '/images/products/' . $filename;
+                        // Stored on the uploads disk (bunny.net once it is set up); the address to show it from comes back
+                        $imageUrls[] = ProductImages::store($image);
                     }
                 }
             }
@@ -1619,12 +1754,15 @@ class AdminController extends Controller
                 $validated['specification'] = $specificationObject;
             }
 
+            // The stock count decides whether the product is on sale, not a separate switch
+            unset($validated['in_stock']);
+
             $product->update($validated);
 
             return response()->json([
                 'success' => true,
                 'message' => 'Product updated successfully',
-                'product' => $product->load('category')
+                'product' => $product->load('category')->append(Product::ADMIN_FIELDS)
             ]);
 
         } catch (\Illuminate\Validation\ValidationException $e) {
@@ -1637,7 +1775,7 @@ class AdminController extends Controller
             Log::error('Error updating product: ' . $e->getMessage());
             return response()->json([
                 'success' => false,
-                'message' => 'Error updating product: ' . $e->getMessage()
+                'message' => config('app.debug') ? 'Error updating product: ' . $e->getMessage() : 'Error updating product'
             ], 500);
         }
     }
@@ -1668,7 +1806,7 @@ class AdminController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Error deleting product',
-                'error' => $e->getMessage()
+                'error' => config('app.debug') ? $e->getMessage() : null
             ], 500);
         }
     }
@@ -1721,14 +1859,8 @@ class AdminController extends Controller
             if ($request->hasFile('product_images')) {
                 foreach ($request->file('product_images') as $image) {
                     if ($image && $image->isValid()) {
-                        // Generate a unique filename
-                        $filename = Str::random(40) . '.' . $image->getClientOriginalExtension();
-
-                        // Store the image in the images/products directory
-                        $path = Storage::disk('images')->putFileAs('products', $image, $filename);
-
-                        // Generate the public URL
-                        $imageUrls[] = '/images/products/' . $filename;
+                        // Stored on the uploads disk (bunny.net once it is set up); the address to show it from comes back
+                        $imageUrls[] = ProductImages::store($image);
                     }
                 }
             }
@@ -1777,7 +1909,7 @@ class AdminController extends Controller
             Log::error('Error updating deal: ' . $e->getMessage());
             return response()->json([
                 'success' => false,
-                'message' => 'Error updating deal: ' . $e->getMessage()
+                'message' => config('app.debug') ? 'Error updating deal: ' . $e->getMessage() : 'Error updating deal'
             ], 500);
         }
     }
@@ -1808,7 +1940,7 @@ class AdminController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Error deleting deal',
-                'error' => $e->getMessage()
+                'error' => config('app.debug') ? $e->getMessage() : null
             ], 500);
         }
     }
@@ -1829,6 +1961,8 @@ class AdminController extends Controller
                 'items.*.quantity' => 'required|integer|min:1',
                 'items.*.price' => 'required|numeric|min:0',
                 'items.*.description' => 'nullable|string|max:500',
+                // Set when the item was picked from the product list; empty for an item typed in by hand
+                'items.*.product_id' => 'nullable|integer|exists:products,id',
                 'paymentMethod' => 'required|string|in:cash,card,bank_transfer,check,other',
                 'deliveryOption' => 'required|string|in:pickup,delivery',
                 'notes' => 'nullable|string|max:1000',
@@ -1839,39 +1973,67 @@ class AdminController extends Controller
                 'sale_type' => 'required|string|in:offline'
             ]);
 
-            // Create the offline sale record
-            $offlineSale = \App\Models\Sales::create([
-                'username' => $validated['customer']['name'],
-                'emailaddress' => $validated['customer']['email'] ?? '',
-                'phone' => $validated['customer']['phone'] ?? '',
-                'phonenumber' => $validated['customer']['phone'] ?? '', // Required field
-                'address' => $validated['customer']['address'] ?? '',
-                'location' => 'In-Store', // Default for offline sales
-                'state' => 'In-Store', // Default for offline sales
-                'city' => 'In-Store', // Default for offline sales
-                'product_ids' => json_encode(array_map(function($item, $index) {
-                    return $index + 1; // Simple ID assignment for offline items
-                }, $validated['items'], array_keys($validated['items']))),
-                'order_details' => json_encode($validated['items']),
-                'payment_method' => $validated['paymentMethod'],
-                'delivery_option' => $validated['deliveryOption'],
-                'total_amount' => $validated['grand_total'],
-                'order_status' => $validated['deliveryOption'] === 'pickup' ? true : false, // Pickup = completed, Delivery = pending
-                'status' => 'completed', // Payment status - offline sales are always completed
-                'payment_status' => 'completed', // Offline sales are paid immediately
-                'notes' => $validated['notes'] ?? '',
-                'sale_date' => $validated['date'],
-                'receipt_number' => $validated['receipt_number'],
-                'sale_type' => 'offline',
-                'subtotal' => $validated['total'],
-                'created_at' => now(),
-                'updated_at' => now()
-            ]);
+            // Line items as the rest of the app reads them: each with its own subtotal
+            $items = array_map(function ($item) {
+                $item['subtotal'] = round($item['quantity'] * $item['price'], 2);
+
+                // A catalogue item carries the product's id, which is what stock is taken from
+                $productId = $item['product_id'] ?? null;
+                unset($item['product_id']);
+                if ($productId) {
+                    $item['id'] = (string) $productId;
+                    $item['type'] = 'product';
+                }
+
+                return $item;
+            }, $validated['items']);
+
+            // The sale is paid on the spot, so it is saved and its units leave stock together:
+            // if there is not enough stock, nothing is saved.
+            $admin = $request->get('authenticated_admin');
+            $offlineSale = DB::transaction(function () use ($validated, $items, $admin) {
+                $offlineSale = \App\Models\Sales::create([
+                    'username' => $validated['customer']['name'],
+                    'emailaddress' => $validated['customer']['email'] ?? '',
+                    'phone' => $validated['customer']['phone'] ?? '',
+                    'phonenumber' => $validated['customer']['phone'] ?? '', // Required field
+                    'address' => $validated['customer']['address'] ?? '',
+                    'location' => 'In-Store', // Default for offline sales
+                    'state' => 'In-Store', // Default for offline sales
+                    'city' => 'In-Store', // Default for offline sales
+                    // The model casts these to JSON, so they are passed as arrays
+                    'product_ids' => array_map(function ($index) {
+                        return $index + 1; // Simple ID assignment for offline items
+                    }, array_keys($items)),
+                    'order_details' => $items,
+                    'quantity' => array_sum(array_column($items, 'quantity')),
+                    'payment_method' => $validated['paymentMethod'],
+                    'order_type' => $validated['deliveryOption'],
+                    'total_amount' => $validated['grand_total'],
+                    'order_status' => $validated['deliveryOption'] === 'pickup' ? true : false, // Pickup = completed, Delivery = pending
+                    'status' => 'completed', // Payment status - offline sales are always completed
+                    'payment_status' => 'completed', // Offline sales are paid immediately
+                    // The admin recording the sale is the one who took the payment
+                    'approved_by_admin' => $admin?->name,
+                    'payment_approved_at' => now(),
+                    'completed_at' => $validated['deliveryOption'] === 'pickup' ? now() : null,
+                    'notes' => $validated['notes'] ?? '',
+                    'sale_date' => $validated['date'],
+                    'receipt_number' => $validated['receipt_number'],
+                    'sale_type' => 'offline',
+                    'subtotal' => $validated['total'],
+                    'created_at' => now(),
+                    'updated_at' => now()
+                ]);
+
+                Inventory::deduct($offlineSale);
+
+                return $offlineSale;
+            });
 
             Log::info('Offline sale created successfully', [
                 'sale_id' => $offlineSale->id,
                 'receipt_number' => $validated['receipt_number'],
-                'customer' => $validated['customer']['name'],
                 'total' => $validated['grand_total']
             ]);
 
@@ -1881,9 +2043,13 @@ class AdminController extends Controller
                 'data' => [
                     'sale_id' => $offlineSale->id,
                     'receipt_number' => $validated['receipt_number']
-                ]
+                ],
+                // The saved sale, with the serial numbers that were taken from stock
+                'order' => $offlineSale
             ], 201);
 
+        } catch (InsufficientStock $e) {
+            return response()->json(['success' => false, 'message' => $e->getMessage()], 422);
         } catch (\Illuminate\Validation\ValidationException $e) {
             return response()->json([
                 'success' => false,
@@ -1897,7 +2063,7 @@ class AdminController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Error creating offline sale',
-                'error' => $e->getMessage()
+                'error' => config('app.debug') ? $e->getMessage() : null
             ], 500);
         }
     }
@@ -1925,7 +2091,7 @@ class AdminController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Error fetching offline sales',
-                'error' => $e->getMessage()
+                'error' => config('app.debug') ? $e->getMessage() : null
             ], 500);
         }
     }
